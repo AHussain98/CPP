@@ -17,13 +17,13 @@ class Node{
           
    Node(int data){ //constructor that takes data as input
           this->data = data;
-          this->next = NULL; //set next pointer to be null for now
+          this->next = NULL; //set next pointer to be null for now, 
    } 
 };
 
 Node* takeInput(){ //return a Node type pointer, but this method takes O(n) time complexity to execute because you have to traverse the whole list to insert each time
       int data;
-      Node * head = NULL; //should be null to start with
+      Node * head = NULL; //should be null to start with, It is always a good practice to assign the pointer NULL to a pointer variable in case you do not have exact address to be assigned.
       cin >> data; //take in data for the first node of the linked list
       
       while(data != -1){  //assume that data being -1 means we want no more data
@@ -76,7 +76,7 @@ Node* takeInputImproved(){ //this method should only take O(1), should be consta
       cin >> data; 
       
       while(data != -1){  
-          Node *temp = new Node(data);    //remember temp is used to stor ethe address of the newest node
+          Node *temp = new Node(data);    //remember temp is used to store the address of the newest node
           if(head == NULL){ 
           
           head = temp;
@@ -135,6 +135,137 @@ Node * Delete(Node * head, int pos) { //will return a new pointer, need to pass 
        return head;    
 }
 
+//create a function to delete duplicates
+
+Node * removeDuplicates(Node * head){ //pass it the address of the head
+       if (head == NULL || head->next == NULL){ //if the linked list is empty or has only one element
+            return head; //there cant be any duplicates if the linked list is empty or only has one element so just return head
+       }
+       //now take two pointers
+       Node * t1 = head;
+       Node * t2 = head->next;
+       
+       while(t2 != NULL){ //so before we reach the end of the linked list
+         if(t1->data == t2->data){ //if we have a duplicate
+            Node * temp = t2; //we're going to use this pointer to delete the duplicate, which is taking up unneccessary memory
+            t2 = t2->next; 
+            delete temp; //this deletes the heap Node object that temp was pointing to
+         }
+         else{ //if they're not the same
+            t1->next = t2;
+            t1 = t2;
+            t2 = t1->next; //so they both move along by one, and the comparison in the loop is redone
+             
+         }
+       }
+       t1->next = t2; //at the end of the loop, t2 is NULL so we're pointing t1->next to NULL
+       return head;
+}
+
+//create a function to find the node that a specific value is stored at
+
+int findData(Node * head, int value){
+    
+    if(head == NULL) { //if the linked list is empty
+       return -1;
+    }
+    int count = 0;
+    Node * temp = head; //this is the pointer we'll use to work the loop
+    
+    while (temp != NULL){ //so before we reach end of linked list
+       if (temp->data == value){
+           return count;
+       }
+          count++;      //increase the count to the next index value
+          temp = temp->next;  //move to the next node and rerun the loop
+        
+    }
+    
+    return -1; //this is what is returned if the value is not in the linked list
+}
+
+//find the midpoint of the linked list
+//we'll do this by using two pointers, one fast and one slow, the fast pointer will move two nodes at a time, the slow one will only move one at a time
+//when the fast pointer reaches NULL or a node with next as NULL, the node that the slow pointer is pointing to at that moment is the middle node
+
+Node * midpoint(Node * head){ //return a pointer
+    if(head == NULL || head->next == NULL){ //if there is no linked list, or only one element
+        return head;
+    }
+    Node * slow = head;
+    Node * fast = head->next;    //slow points at first element and fast points at second
+    
+    while(fast != NULL && fast->next != NULL){   //so fast is either at the last node or has just passed it, write the while condition this way around, because if fast is NULL, it cannot have a next, so writing that first may cause an error
+        slow = slow->next;
+        fast = fast->next->next; //fast moves by two, slow only by one
+    }
+    
+    return slow; //we come out of the loop when the above condition is broken, so slow is now pointing at the middle element ans should be returned
+}
+
+//finally, we can merge sorted linked lists
+
+Node * merge(Node * list1, Node * list2){ //takes two pointers to linked lists and returns a pointer to a third, sorted one
+  if (list1 == NULL){
+      return list2;
+  }
+  if (list2 == NULL){  //so if either of them are empty, return the other
+      return list1;
+  }
+
+  Node * newhead  = NULL; //new pointer, this is for the sorted linked list but null for now
+  Node * tail = NULL; //using this because we don't want to keep traversing the linked list
+  
+  Node * temp1 = list1; //pointer to the first list passed in
+  Node * temp2 = list2; //pointer to the second list passed in
+  
+  if (temp1->data < temp2->data) {
+      newhead = temp1;
+      tail = newhead;
+      temp1 = temp1->next; 
+      
+  }
+  
+  else{ //if the head of list2 is smaller
+  newhead = temp2;
+  tail = newhead;
+  temp2 = temp2->next;
+      
+  }
+  
+  //so we've now set the head of the sorted combined linked list and moved the temp pointer to the next node
+  
+  while(temp1 != NULL && temp2 != NULL){ //so before you get to the end of both lists
+      if (temp1->data < temp2->data){
+            tail->next = temp1; //tail is still at the newhead, so here its pointing thenewhead's next as the second smallest value
+            tail = temp1; //tail then moves over to the second smallest value
+            temp1 = temp1->next;   //temp1 moves to the next value along in the first linkedlist
+      }
+      else{ tail->next = temp2;
+             tail = temp2; //in this case, tail moves to the second array
+             temp2 = temp2->next;
+          
+      }
+      
+  }
+  
+  //we come out of the above loop if one of the temp pointers is null, so if one of the linked lists finishes
+  
+  if(temp1 != NULL){
+      tail->next = temp1;
+  }
+  //only one of these statements will get executed, and the rest of that linked list will just carry on as normal
+  if(temp2 != NULL){
+      tail->next = temp2;
+  }
+  
+  return newhead;
+}
+
+
+
+
+
 int main(){
    //now lets create some nodes
    
@@ -169,13 +300,31 @@ int main(){
     
     cout << endl;
     
-    Node * updateLinkedList = Insert(head1,99,2);    //works!!
-    print(head1);
-    Delete(head1,3);  //try deleting the entry at 3rd index
+   // Node * updateLinkedList = Insert(head1,99,2);    //works!!
+   // print(head1);
+   // Delete(head1,3);  //try deleting the entry at 3rd index
+   // cout << endl;
+   // print(head1);
+    
+  //  Node * update = removeDuplicates(head1);
+   // print(update);
+    
     cout << endl;
-    print(head1);
+    
+  int ans = findData(head1, 3); //give the index that has the data value 3
+  
+    cout << ans << endl;
+    
+    Node * mid = midpoint(head1);
+    cout << mid->data << endl;
     
     
+    //create a couple of linked lists to try merging them
     
+    Node * list1 = takeInputImproved();
+    Node * list2 = takeInputImproved();
+    
+    Node * newhead = merge(list1,list2);
+    print(newhead);
     
 }
