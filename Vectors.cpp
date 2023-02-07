@@ -27,7 +27,7 @@ int main(){
 
          //this is how we access the elements
          for (int i = 0; i < v1.size();i++){
-             cout << v1[i] << " "; // access vector elements just like an array
+             cout << v1[i] << " "; // access vector elements just like an array, as long as the vector is stored on the stack, via a pointer, you have to use the ->at() method, or (*vec)[]
          }
 
          //to delete the last element entered into the vector, you use the pop back fucntion

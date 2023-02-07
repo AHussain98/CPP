@@ -9,9 +9,9 @@ int main() {
 	int k3 = 10;
 	int *p = &k3;
 	int arr[100];
-	
+
 	//each of the above variables take up specific space in the memory, this is known as stack memory
-	//previously, we weren't able to declare an array like int arr[n], because we neded to giveit an initial value 
+	//previously, we weren't able to declare an array like int arr[n], because we neded to giveit an initial value
 	//this was to compensate for the fact we didn't know how big i should be
 	//the compiler doesn't know what n should be, it will take a random value whoch may not be sufficient
 	//arr is also kept on the stack
@@ -44,15 +44,15 @@ cout << v << endl;
  // we can then access the values in the array via the pointer
  v[0] = 10;
  v[1] = 20;
- 
+
  cout << v[1] << endl;
- 
+
  //so we can then build up the array as before, with a dynamic size
- 
+
  int n;
  cout << "enter size of dynamic array" << endl;
  cin >> n;
- 
+
  int *f = new int[n];
  cout << "enter your array values" << '\n';
  for (int i = 0;i<n;i++) {
@@ -84,4 +84,6 @@ delete [] f; // this is how to delete an array from the heap, if f was just an i
 cout << " f after: " << endl;
 cout << * f << endl; // pointer still has an address, however it has a garbage value there due to teh deletion
 
+
+int * test = new int [];
 }
