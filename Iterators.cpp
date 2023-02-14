@@ -21,7 +21,7 @@ while (it != str.end()){ // end returns an element correcsponding to the element
 //now for a vector
 
 vector<int> v {1,2,3,4,5}; // with vectors, you always have to define the type
-for(vector<int>::iterator it = v.begin(); it != v.end(); it++){
+for(vector<int>::iterator it = v.begin(); it != v.end(); it++){ //  we've included the std namespace, so this is actually std::vector::iterator
     cout << *it;
 }
 
