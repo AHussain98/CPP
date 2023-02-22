@@ -17,21 +17,25 @@ class Test{
       //   cout << "yo!;}    this will still work, for example
 
       // a constructor with a single argument also acts as an implicit conversion operator
-      /*
-      class Test{ int i;
+       };
+      class Test2{
+       int i;
       public:
-          Test(int i): i(i){}
+         explicit Test2(int i): i(i){ }; // single argument cnostructor used here while being non-explicit, this can lead to implicit type conversion errors seen below
+        friend void print(const Test2& foo);
       };
 
-      Test test = 4; //this then becomes valid, only because there is a constructor with a single argument
+     // Test2 test = 4; //this then becomes valid, only because there is a constructor with a single argument
       // explicit Test(int i): i(i){}    // explicit keyword stops this, make the constructor explicit
-      */
-};
+     void print(const Test2& foo){
+         std::cout << foo.i;
+     }
+
 
 int main(){
 
          Test test;
-         
+
         // std::cout << test;  // normally, this would'nt work, but the compiler rethinks it and changes the type of the object into an int because of the above conversion operator
          // this is an implicit conversion, which can be suprising and are best avoided for that reason
 
@@ -40,5 +44,7 @@ int main(){
 
         std::cout << static_cast<int>(test);    // this works because it is explicit
 
-
+        Test2 test2 = 4; // wouldn't work if Test2 constructor was explicit, int literal 4 is treated like a Test2 object, this also works due to implicit type conversion, copy constructor called for this
+        print(test2);
+        print(4); // wouldnt work if test2 constructor was explicit, this works because the 4 is implicitly transformed into a Test2 object, due to Test2 having a single argument constructor of the same type, performing type conversion onthe int literal 4
     }
