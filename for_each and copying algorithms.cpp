@@ -2,9 +2,9 @@
 # include <string>
 # include <vector>
 # include <algorithm>
+
 // for_each() calls a function on every element in a iterator range
 // this can also be done in a ranged for loop, which is usually cleaner
-
 
 int main(){
 

@@ -47,7 +47,7 @@ std::vector<int> vec {1,2,3,3,4,5,6,6,6};
 auto it3 = std::search_n(cbegin(vec),cend(vec),2,3); // looking for two 3's in a row in the vector vec
 std::cout << *it3 << std::endl;
 
-// there is also std::search(0 which takes two iterator ranges, it looks for an occurance of the second iterator range inside the first
+// there is also std::search() which takes two iterator ranges, it looks for an occurance of the second iterator range inside the first
 // simsilar to finding a substring in a string
 // it returns an iterator to teh first occurance
 
