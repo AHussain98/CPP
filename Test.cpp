@@ -1,24 +1,13 @@
 #include <iostream>
-using namespace std;
+# include <string>
 
-int main() {
-
-struct boyo {
-	int x;
-	string y;
-};
-
-boyo boyo1;
-boyo *b_point = &boyo1;
-
-b_point->x = 100;
-b_point->y = "this works!";
-
-cout << b_point->x 
-;
-
-return 0;
- }
+int main(){
 
 
 
+
+    std::string str {"Zello"};
+    std::string str2 {"HZZZZZZZZZZZZ!"}; // the comparison is made on the first char that is different
+
+    std::cout << std::max(str,str2);
+}
