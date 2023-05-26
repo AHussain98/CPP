@@ -304,6 +304,36 @@ int main()
     return 0;
 }
 
+
+differences between versions of C++:
+C++ 11:
+Unified Initialization
+Multithreading
+Smart Pointers
+Hash Tables
+std::array container
+Move semantics
+Lambda functions included
+auto and decltype added
+
+C++ 14:
+Generalized Lambdas
+Reader-Writer Locks
+constexpr included
+Return type deductions extended to all functions
+
+C++ 17:
+The file system library and Network concepts included
+Improved Lambdas
+Fold Expressions included
+Initializers in if and switch statements
+Concurrent and Parallel algorithms in Standard Template Library(STL)
+Nested Namespaces
+Transactional memory
+Inline Variables
+Optional header file
+Class Template argument deduction
+
  insertion operator (<<)
  extraction operator >>
 
