@@ -415,3 +415,50 @@ When an expression is used in an expression statement, any return value generate
 
 
 Inline functions were originally designed as a way to request that the compiler replace your function call with inline expansion of the function code. You should not need to use the inline keyword for this purpose because the compiler will generally determine this for you. In modern C++, the inline keyword is used to exempt a function from the one-definition rule, allowing its definition to be imported into multiple code files. Inline functions are typically defined in header files so they can be #included into any code files that needs them.
+
+When an assertion evaluates to false, your program is immediately stopped. This gives you an opportunity to use debugging tools to examine the state of your program and determine why the assertion failed. Working backwards, you can then find and fix the issue.
+In C++, runtime assertions are implemented via the assert preprocessor macro, which lives in the <cassert> header.
+
+To implement virtual functions, C++ implementations typically use a form of late binding known as the virtual table. The virtual table is a lookup table of functions used to resolve function calls in a dynamic/late binding manner. The virtual table sometimes goes by other names, such as “vtable”, “virtual function table”, “virtual method table”, or “dispatch table”.
+
+The virtual table is actually quite simple, though it’s a little complex to describe in words. First, every class that uses virtual functions (or is derived from a class that uses virtual functions) is given its own virtual table. This table is simply a static array that the compiler sets up at compile time. A virtual table contains one entry for each virtual function that can be called by objects of the class. Each entry in this table is simply a function pointer that points to the most-derived function accessible by that class.
+
+Second, the compiler also adds a hidden pointer that is a member of the base class, which we will call *__vptr. *__vptr is set (automatically) when a class object is created so that it points to the virtual table for that class. Unlike the *this pointer, which is actually a function parameter used by the compiler to resolve self-references, *__vptr is a real pointer. Consequently, it makes each class object allocated bigger by the size of one pointer. It also means that *__vptr is inherited by derived classes, which is important.
+
+To address some common challenges with inheritance, C++ has two inheritance-related identifiers: override and final. Note that these identifiers are not keywords -- they are normal words that have special meaning only when used in certain contexts.
+the override specifier can be applied to any virtual function by placing the override specifier after the function signature (the same place a function-level const specifier goes).
+If the function does not override a base class function (or is applied to a non-virtual function), the compiler will flag the function as an error.
+Use the virtual keyword on virtual functions in a base class. Use the override specifier (but not the virtual keyword) on override functions in derived classes.
+There may be cases where you don’t want someone to be able to override a virtual function, or inherit from a class. The final specifier can be used to tell the compiler to enforce this. If the user tries to override a function or inherit from a class that has been specified as final, the compiler will give a compile error.
+
+The process of building complex objects from simpler ones is called object composition. There are two types of object composition: composition, and aggregation.
+
+Composition exists when a member of a class has a part-of relationship with the class. In a composition relationship, the class manages the existence of the members. To qualify as a composition, an object and a part must have the following relationship:
+
+The part (member) is part of the object (class)
+The part (member) can only belong to one object (class) at a time
+The part (member) has its existence managed by the object (class)
+The part (member) does not know about the existence of the object (class)
+Compositions are typically implemented via normal member variables, or by pointers where the class manages all the memory allocation and deallocation. If you can implement a class as a composition, you should implement a class as a composition.
+
+Aggregations exists when a class has a has-a relationship with the member. In an aggregation relationship, the class does not manage the existence of the members. To qualify as an aggregation, an object and its parts must have the following relationship:
+
+The part (member) is part of the object (class)
+The part (member) can belong to more than one object (class) at a time
+The part (member) does not have its existence managed by the object (class)
+The part (member) does not know about the existence of the object (class)
+Aggregations are typically implemented via pointer or reference.
+
+
+Associations are a looser type of relationship, where the class uses-an otherwise unrelated object. To qualify as an association, an object and an associated object must have the following relationship:
+
+The associated object (member) is otherwise unrelated to the object (class)
+The associated object (member) can belong to more than one object (class) at a time
+The associated object (member) does not have its existence managed by the object (class)
+The associated object (member) may or may not know about the existence of the object (class)
+Associations may be implemented via pointer or reference, or by a more indirect means (such as holding the index or key of the associated object).
+
+In a dependency, one class uses another class to perform a task. The dependent class typically is not a member of the class using it, but rather is temporarily created, used, and then destroyed, or passed into a member function from an external source.
+
+
+
