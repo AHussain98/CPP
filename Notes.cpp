@@ -460,5 +460,16 @@ Associations may be implemented via pointer or reference, or by a more indirect 
 
 In a dependency, one class uses another class to perform a task. The dependent class typically is not a member of the class using it, but rather is temporarily created, used, and then destroyed, or passed into a member function from an external source.
 
+A virtual function is a special type of function that resolves to the most-derived version of the function (called an override) that exists between the base and derived class. To be considered an override, the derived class function must have the same signature and return type as the virtual base class function. The one exception is for covariant return types, which allow an override to return a pointer or reference to a derived class if the base class function returns a pointer or reference to the base class.
 
+An interface class is one with no member variables and all pure virtual functions. These are often named starting with a capital I.
 
+When a derived class is assigned to a base class object, the base class only receives a copy of the base portion of the derived class. This is called object slicing.
+
+Dynamic casting can be used to convert a pointer to a base class object into a pointer to a derived class object. This is called downcasting. A failed conversion will return a null pointer.
+
+All template functions or classes must start with a template parameter declaration that tells the compiler that the following function or class is a template function or class. Within the template parameter declaration, the template type parameters or expression parameters are specified. Template type parameters are just placeholder types, normally named T, T1, T2, or other single letter names (e.g. S). Expression parameters are usually integral types, but can be a pointer or reference to a function, class object, or member function.
+
+Splitting up template class definition and member function definitions doesn’t work like normal classes -- you can’t put your class definition in a header and member function definitions in a .cpp file. It’s usually best to keep all of them in a header file, with the member function definitions underneath the class.
+
+Template specialization can be used when we want to override the default behavior from the templated function or class for a specific type. If all types are overridden, this is called full specialization. Classes also support partial specialization, where only some of the templated parameters are specialized. Functions can not be partially specialized.
