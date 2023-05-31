@@ -39,7 +39,7 @@ Derived: Array, pointer, etc.
 Enumeration: Enum
 User-defined: Structure, class, etc.
 
-Struct is different from a class because its members are public by default, and the default access specifiers are public when deriving a struct from a class/struct.
+Struct is different from a class because its members are public by default, and the default access specifiers are public when deriving a struct from a class/struct. You can't interit from a struct.
 
 A member function in the base class redefined in a derived class is a virtual function. It is declared using the virtual keyword. It ensures that the correct function is called for an object, irrespective of the type of reference/pointer used for the function call. Virtual functions are mainly used for runtime polymorphism.
 
