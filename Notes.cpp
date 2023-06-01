@@ -189,7 +189,8 @@ It is always a good practice to assign the pointer NULL to a pointer variable in
 #include "file" tells the compiler to search the current directory (i.e. the directory in which the source file resides) for file.
 
 argc and arg v?
-inline fucntions?
+
+Inline fucntions?
 printf?
 
 
@@ -529,3 +530,14 @@ Static: Static variables are initialized only once. Compiler persist the variabl
 Mutex: A mutex is a lockable object that is designed to signal when critical sections of code need exclusive access, preventing other threads with the same protection from executing concurrently and access the same memory locations.
 Semaphore: Semaphores are just normal variables used to coordinate the activities of multiple processes in a computer system. They are used to enforce mutual exclusion, avoid race conditions and implement synchronization between processes. The process of using Semaphores provides two operations: wait (P) and signal (V). The wait operation decrements the value of the semaphore, and the signal operation increments the value of the semaphore.
 Atomic: Consider a multithreaded program with one shared variable. Now, imagine that all the threads are trying to access and modify this shared variable at the same time. When multiple threads try to access the same variable concurrently, and at least one of them is a write operation, then this is known as a data race. Some data races can cause race conditions which are a problem. Race condition is an error caused by the ordering of events such that the correctness of a program is compromised. Not all data races lead to race conditions and not all race conditions are caused by data races. In order to solve this problem, C++ offers atomic variables that are thread-safe. They allow indivisible read, update and write operations on the shared variable without using mutexes (locks). Mutexes use software routines to lock and unlock operation/s, however, atomic variables utilise processor support through compare and swap instructions. In case of simple increments and decrements, atomic variables are significantly faster than locks.
+
+Storage classes -> A storage class defines the scope (visibility) and life-time of variables and/or functions within a C++ Program. These specifiers precede the type that they modify. There are following storage classes, which can be used in a C++ Program
+
+auto: The auto storage class is the default storage class for all local variables.
+register: The register storage class is used to define local variables that should be stored in a register instead of RAM. This means that the variable has a maximum size equal to the register size (usually one word) and can't have the unary '&' operator applied to it (as it does not have a memory location). Used when we need quick access to something small like a counter
+static: The static storage class instructs the compiler to keep a local variable in existence during the life-time of the program instead of creating and destroying it each time it comes into and goes out of scope. Therefore, making local variables static allows them to maintain their values between function calls. The static modifier may also be applied to global variables. When this is done, it causes that variable's scope to be restricted to the file in which it is declared.
+extern: The extern storage class is used to give a reference of a global variable that is visible to ALL the program files. When you use 'extern' the variable cannot be initialized as all it does is point the variable name at a storage location that has been previously defined. When you have multiple files and you define a global variable or function, which will be used in other files also, then extern will be used in another file to give reference of defined variable or function. Just for understanding extern is used to declare a global variable or function in another file.
+mutable: The mutable specifier applies only to class objects, which are discussed later in this tutorial. It allows a member of an object to override const member function. That is, a mutable member can be modified by a const member function.
+
+
+
