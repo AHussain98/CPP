@@ -146,3 +146,17 @@ int main() {
 	prom.set_value(5);  // calling set value for promise makes future ready
 
 }
+
+/ * std::future<int> f = std::async(std::launch::async, []{
+    // long calculation
+    return /* some result */;
+});
+/* do some other stuff */
+int result = f.get();
+std::async with the std::launch::async flag runs a function (here a lambda) asynchronously (in another thread). It returns a std::future, which will eventually, when that function finishes, contain an int value.
+
+While that function is running, we can go on and /* do some other stuff */.
+
+When we need the result, we call f.get() which waits until the int value is available, meaning until the asynchronous function has finished, and then gives it to us. The value f.get() gives us is the function's return value which std::async stored in the std::future after the function returned.
+
+Instead of std::async it may also be used with threads via std::promise or std::packaged_task.  */
