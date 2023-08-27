@@ -1,0 +1,148 @@
+# include <iostream>
+# include <mutex>
+# include <queue>
+# include <memory>
+# include <thread>
+# include <condition_variable>
+# include <future>  // for async
+
+
+// a condition variable is a basic mechanism for waiting for an event to be triggered by another thread
+// a condition variable is associated with some event, and one or more threads can wait for that event to happen
+// if some thread has determined that the event is satisfied, it can then notify one or more of the threads waiting for that condition variable, and allow them to continue processing
+
+// waking up of a condition variable can be due to notification from another thread, or can be spurious wake up from os
+// lets use condition variables to implement a thread safe queue
+
+// A condition variable is an object able to block the calling thread until notified to resume.
+
+// It uses a unique_lock(over a mutex) to lock the thread when one of its wait functions is called.
+// The thread remains blocked until woken up by another thread that calls a notification function on the same condition_variable object.
+// Objects of type condition_variable always use unique_lock<mutex> to wait
+
+// One use-case of using std::future over std::thread is you want to call a function which returns a value. When you want return value of the function, you can call get() method of future.
+// std::thread doesn't provide a direct way to get the return value of the function.
+
+// futures provide a mechanism to access the results of an asynchronous operation
+// a synchronous operation blocks a process until the operation is complete, this is sequential operation
+// an asynchronous operation is non-blocking and only initiates the operation, the caller could discover completion of the concurrent operation by come other mechanism
+
+// a summary of steps:
+// first, the creator thread of the asynchronous task has to obtain the future associated with the asynchronous task
+// when the creator thread needs the result of the async task, it called the get method of the future
+// get method may block if the async operation has not completed its operation yet
+// when the async operation is ready to send a result to the creator, it can do so by modifying shared state that is linked to the creators std::future
+
+// we can also launch asyncs via the std::packaged_task class, which wraps any callable target so that it can be invoked asynchronously
+// its return value or thrown exception is stored in a shared state which can be accessed thruogh std::future objects
+
+// each std::promise object is paired with a std::future object
+// a thread with access to the std::future object can wait for the result to be set, while another thread that has access to the corresponding std::promise object can call set_value() to store the value and make the future ready
+
+
+
+
+template <typename T>
+class thread_safe_queue {
+private:
+	std::mutex m;  // provides mutually exclusive access to all the functions
+	std::condition_variable cv;  // will be used in the wait and pop function
+	std::queue<std::shared_ptr<T>> queue;  // members of the class are the mutex, the condition variable and the queue
+
+public:
+	thread_safe_queue() {  // default constructor
+
+
+	}
+
+	void push(T& value) {
+		std::lock_guard<std::mutex> lg(m);
+		queue.push(std::make_shared<T>(value));
+		cv.notify_one(); // call the notify one function of the condition variable, which will wake up any waiting threads and cause them to check if the condition passed
+	}   // notify one means notify one one of the threads that are stuck at the failed condition variable, that random thread will wake up and execute, and only that one
+	// we could use notify_all() to awaken all waiting threads, but since only one thread can acquire the mutex, the other threads will have to wait until that thread completes execution and releases the mutex
+	// since we're only pushing one element onto the queue anyway, we don't need to notify all elements
+
+	std::shared_ptr<T> pop() {
+
+		std::lock_guard<std::mutex> lg(m);
+
+		if (queue.empty()) {
+			return std::shared_ptr<T>();
+		}
+		else {
+			std::shared_ptr<T> ref(queue.front());
+			queue.pop();
+			return ref;
+		}
+	}
+
+	bool empty() {
+		std::lock_guard<std::mutex> lg(m);
+		return queue.empty();
+	}
+
+	std::shared_ptr<T> wait_pop() {
+
+		std::unique_lock<std::mutex> ul(m);  // create a unique lock object
+		cv.wait(ul, [this] {return !queue.empty(); });  // wait until this condition in the lambda is fulfilled
+		// if the queue is not empty, which means that the queue had elements in it, the thread which has acquired the unique lock will progress onto the next line while holding the lock
+		// if the queue is empty, then the thread will wait here until the condition variable is notified by another thread
+		// using a condition variable, when the condtion fails, we unlcok the mutex, so other threads are allowed to call this wait_pop() function
+		// so there is the chance that multiple threads could wait until there is an element in the queue
+
+
+		std::shared_ptr<T> ref = queue.front();
+		queue.pop();
+		return ref;
+
+
+
+	}
+
+};
+
+// an example of async
+
+int find_answer() {
+	
+	int i = 0;
+	while (i < 500) {
+		i++;
+	}
+	return i;
+}
+
+void do_other_calcs() {
+
+	std::cout << "Doing other stuff" << std::endl;
+}
+
+void print_result(std::future<int>& fut) {
+	std::cout << fut.get() << "\n";  //now when both threads call this print result function, they will call this future.get() function and wait until future is ready
+}
+
+int main() {
+
+	std::future<int> the_answer = std::async(find_answer);  // future object, set it equal to the async task
+	// std::async is how we create an asynchronous operation (daemon), pass it a function and params
+	// we can optionally provide wither std::launch::async or std::launch:deferred as the first params of the async object
+	// async executes immediately on another thread, deferred executes on the calling thread at the point that get is called on the futures object
+	// launch::deferred will invoke the function on the calling thread, while launch::async will invoke the function on a new thread.
+	do_other_calcs();
+	std::cout << "The answer is: " << the_answer.get();  // if the asynchronous task is not completed yet when we call the get function, main thread will be blocked until find_answer is completed
+
+
+	std::promise<int> prom; //promise object
+	std::future<int> fut(prom.get_future()); // future object we pass the promise to
+	// we could make the above a shared future object instead to get thebelow to work properly, you can call .get() on a shared future object many times
+
+	// lets create two threads
+	std::thread th1(print_result, std::ref(fut));  // pass in a reference to the existing future object as the input param to teh fucntion 
+	// however this is not going to work for the below thread, because once future.get() is called, that future object is invalid afterwards
+	// what we need is to make use of shared future objects, which can be used by multiple threads
+	std::thread th2(print_result, std::ref(fut));
+
+	prom.set_value(5);  // calling set value for promise makes future ready
+
+}
