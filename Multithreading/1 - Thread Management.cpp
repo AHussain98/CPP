@@ -24,6 +24,9 @@
  data level: same task on different data
 
  To the thread class constructor, we can provide any callable object, such as functions, lambdas, functors
+
+ remember that the thread is launched as soon as you create the thread object
+  you have to call join or detach before the calling thread goes out of scope, but the thread doesnt wait until one of these is called to begin executing, the thread executes as soon as it is created
 */
 
 void foo() {
