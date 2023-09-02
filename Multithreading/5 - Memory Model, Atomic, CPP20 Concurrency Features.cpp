@@ -36,6 +36,56 @@
 // if they are not equal, the expected value is updated with the actual value of the atomic varibale.
 // This will return true if store is performed, false otherwise
 
+// cpp standard specifies 6 memory ordering options
+// using these memory ordering options with atomic operations, we can create synchronization points the code
+// we can specify memory order options in the parameters of methods of atomic types
+// the compiler uses memory order sequential consistent as a default option
+
+// memory_order_seq_cst is the easiest memory ordering option
+// this implies that the behaviour of the program is consistent with a simple sequential view of the world
+// so if you write any atomic operation without specifying a memory ordering option, you are using sequential consistent by default
+// seq_cst means every thread gets the same global view of shared memory
+
+// todays processors have multiple levels of caches
+// a store buffer stores write instructions and sits between the l1 cache on the actual processor and the l2 cache
+// because writing operations are faster than read operations, it's beneficial to store many write operations and execute them when teh store buffer is flushed
+// instruction reordering can occur in firstly by teh compiler, then in the cache, then by the procesor directlu via prefetch speculation
+// mutexes prevent implicit instruction reordering and provide thread safety
+// memory_order_relaxed is the total opposite to seq_cst
+// view of the threads is not consistent with each other and there is no restruction on instriction re-ordering
+// memory order acquire and release are used to provide synchronisation, acquire waits for release
+
+
+// atomic operations can be seperated into load/acquire operations, store/release operations and read,modify,write / acquire, release operations
+// store: memory orders used here are relaxed, release or seq_cst
+// load: memory orders used here are relaxed, comsume, aquire and seq_cst
+// rmw: relaxed, consume, acquire, release, rel_acq, seq_cst
+
+// lets implement a spin lock mutex
+class spinlock_mutex {
+
+private:
+
+	std::atomic_flag flag = ATOMIC_FLAG_INIT;
+
+public:
+
+	spinlock_mutex(){}
+
+	void lock() {
+		while (flag.test_and_set(std::memory_order_acquire));  // one thread will wait in this while loop until it sees this flag as false
+	}
+
+	void unlock() {
+		flag.clear(std::memory_order_release);
+	}
+
+};
+
+
+
+
+
 int main() {
 	std::atomic_flag flag1 = ATOMIC_FLAG_INIT; // initalise the flag
 	std::cout << flag1.test_and_set() << std::endl; // changes the value of the flag and returns the previous value, so here its set to true but returns false
@@ -63,6 +113,39 @@ int main() {
 	// if x was not the same as the expected value, the expected value would have been updated to the atomic variable's current value, x is unchanged
 	// comapare_exchange_weak cannot guarantee that the operation will happen successfully, compare_echange_string does
 
+	// atomic<T*> is an atomic form of pointer
+	// this does not mean that the object pointed to is atomic, but that the pointer itself is atomic
+	// atomic pointers are not copy constructable or copy assignable, but can be constructed and assigned using non atomic values
+
+	// other than the above functions common to all atomic types, there are a few specific operations only for atomic pointers
+	// these are fetch_add, fetch_sub, ++, --
+
+	int values[20]; // integer array called values of size 20
+	for (int i = 0; i < 20; ++i) {
+		values[i] = i;
+	}
+
+	std::atomic<int*> val_pointer = values; // atomic pointer points to values
+	std::cout << *val_pointer << std::endl;  // first value is 0
+
+	// fetch_add adds the given offset to the pointer and returns the previous pointer
+	int* prev_pointer = val_pointer.fetch_add(12);  // val pointer is moved on by 12, prev pointer points to where val pointer used to point
+	// fetch_sub determines the given negative offset from the atomic pointer and also returns the previous value
+
+	// ++ and -- work the same as for normal pointers as they do for atomic pointers
+
+    //  if we want to use an atomic user defined type, we must ensure:
+	// the type has a trivial copy assignment operator
+	// must not have virtual functions
+	// every non static member should have trivial copy assignmnet operator
+	// not be a descendent of a virtual base class
+	// base class must use a compiler generated copy assignment operator
+	// they type must be bitwise equality comparable
+
+
+
+	std::cout << "Hello there!";
+}
 
 
 
