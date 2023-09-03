@@ -62,7 +62,7 @@
 // rmw: relaxed, consume, acquire, release, rel_acq, seq_cst
 
 // lets implement a spin lock mutex
-class spinlock_mutex {
+class spinlock_mutex {  // this can then be passed into a lock_guard object
 
 private:
 
