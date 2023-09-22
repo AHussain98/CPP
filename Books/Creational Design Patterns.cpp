@@ -7,7 +7,7 @@ using namespace std;
 
 // a couple of ways to create objects:
 // stack and heap allocation
-/* unique pointer (unique_ptr) can take a heapallocated pointer and manage it so that it’s cleaned up automatically when there is no longer a reference to it. A unique pointer really is unique: you cannot make copies of it, and you cannot pass it into another function without losing control of the original.
+/* unique pointer (unique_ptr) can take a heapallocated pointer and manage it so that itâ€™s cleaned up automatically when there is no longer a reference to it. A unique pointer really is unique: you cannot make copies of it, and you cannot pass it into another function without losing control of the original.
    A shared pointer (shared_ptr) takes a heap-allocated pointer and manages it, but allows the sharing of this pointer around in code. The owned pointer is only cleaned up when there are no components holding on to the pointer.
    A weak pointer (weak_ptr) is a smart but nonowning pointer, holding a weak reference to an object managed by a shared_ptr. You need to convert it to a shared_ptrin order to be able to actually access the referenced object. One of its uses is to break circular references of shared_ptrs.*/
 
@@ -53,17 +53,17 @@ struct HtmlBuilder {
 		}
 	}
 };
-// This is a dedicated component for building up an HTML element. The add_child() method is the method that’s intended to be used to add additional children to the current element, each child being a name - text pair.
+// This is a dedicated component for building up an HTML element. The add_child() method is the method thatâ€™s intended to be used to add additional children to the current element, each child being a name - text pair.
 
 /*The goal of the Builder pattern is to define a component dedicated entirely to piecewise construction of a complicated object or set of objects. We 
 have observed the following key characteristics of a Builder:
 
-• Builders can have a fluent interface that is usable for complicated construction using a single invocation chain.
+â€¢ Builders can have a fluent interface that is usable for complicated construction using a single invocation chain.
 To support this, builder functions should return this or *this.
-• To force the user of the API to use a Builder, we can make the target object’s constructors inaccessible and 
+â€¢ To force the user of the API to use a Builder, we can make the target objectâ€™s constructors inaccessible and 
 then define a static create() function that returns the builder.
-• A builder can be coerced to the object itself by defining the appropriate operator.
-• A single builder interface can expose multiple subbuilders. Through clever use of inheritance and fluent interfaces, one can jump from one builder to 
+â€¢ A builder can be coerced to the object itself by defining the appropriate operator.
+â€¢ A single builder interface can expose multiple subbuilders. Through clever use of inheritance and fluent interfaces, one can jump from one builder to 
 another with ease.
 
 The use of the Builder pattern makes sense when the construction of the object is a nontrivial process. 
@@ -98,9 +98,9 @@ public:
 // lets do this by redefining the above class so the factory class is a friend of it
 
 // note:
-//• The constructor of Point is private because we don’t want anyone calling it directly.This isn’t a strict requirement, but making it public creates a bit of an
+//â€¢ The constructor of Point is private because we donâ€™t want anyone calling it directly.This isnâ€™t a strict requirement, but making it public creates a bit of an
 // ambiguity, as it presents the user two different ways of constructing the object.
-//• Point declares PointFactory as a friend class.This is done deliberately so that the private constructorof Point is available to the factor—without this, the factory wouldn’t be able to instantiate the object!The
+//â€¢ Point declares PointFactory as a friend class.This is done deliberately so that the private constructorof Point is available to the factorâ€”without this, the factory wouldnâ€™t be able to instantiate the object!The
 // implication here is that both of these types are being created at the same time, rather than the factory being created much later.
 
 struct pointFactory { // a dedicated class specifically for creating point instances
@@ -116,14 +116,14 @@ struct pointFactory { // a dedicated class specifically for creating point insta
 // when we use teh term factory, we mean a class that knows how to create objects or a function that creates an object when called
 
 /* A factory method is a class member that acts as a way of creating object. It typically replaces a constructor.
-• A factory is typically a separate class that knows how to construct objects, though if you pass a function (as in std::function or similar) that constructs objects, this argument is also called a factory.
-• An abstract factory is, as its name suggests, an abstract class that can be inherited by concrete classes that offer a family of types. 
+â€¢ A factory is typically a separate class that knows how to construct objects, though if you pass a function (as in std::function or similar) that constructs objects, this argument is also called a factory.
+â€¢ An abstract factory is, as its name suggests, an abstract class that can be inherited by concrete classes that offer a family of types. 
 A factory has several critical advantages over a constructor call, namely:
-• A factory can say no, meaning that instead of actually returning an object it can return, for example, a nullptr.
-• Naming is better and unconstrained, unlike constructor name.
-• A single factory can make objects of many different types.
-• A factory can exhibit polymorphic behavior, instantiating a class and returning it through its base class’ reference or pointer.
-• A factory can implement caching and other storage optimizations; it is also a natural choice for approaches such as pooling or the Singleton pattern
+â€¢ A factory can say no, meaning that instead of actually returning an object it can return, for example, a nullptr.
+â€¢ Naming is better and unconstrained, unlike constructor name.
+â€¢ A single factory can make objects of many different types.
+â€¢ A factory can exhibit polymorphic behavior, instantiating a class and returning it through its base classâ€™ reference or pointer.
+â€¢ A factory can implement caching and other storage optimizations; it is also a natural choice for approaches such as pooling or the Singleton pattern
 Factory is different from Builder in that, with a Factory, you typically create an object in one go, whereas with Builder, you construct the object piecewise by providing information in parts.*/
 
 // Prototype
@@ -194,17 +194,17 @@ struct Contact {
 premade object, copy it, fiddle it a little bit, and then use it independently of the original.
 
 There are really only two ways of implementing the Prototype pattern in C++, and both of them require manual manipulation. They are:
-• Writing code that correctly duplicates your object, that is, performs a deep copy. This can be done in a copy 
+â€¢ Writing code that correctly duplicates your object, that is, performs a deep copy. This can be done in a copy 
 constructor/copy assignment operator or in a separate member function.
-• Write code for the support of serialization/deserialization and then use this mechanism to implement cloning as serialization immediately 
+â€¢ Write code for the support of serialization/deserialization and then use this mechanism to implement cloning as serialization immediately 
 followed by deserialization. This carries the extra computational cost; its significance depends on how often you need to do the copying. The only advantage 
 of this approach, compared with using, say, copy constructors, is that you get serialization for free*/
 
 // Singleton
 // very simple idea that you should only have one instance of a particular component in your application
 // the naive approach to this problem is to agree that we will simply never instantiate this object ever
-// Now, the problem with this approach, apart from the fact that your developer colleagues might simply ignore the advice, is that objects can becreated in stealthy ways where the call to the constructor isn’t immediately
-// obvious.This can be anything—copy constructor / assignment, a make_unique() call, or the use of an inversion of control(IoC) container.
+// Now, the problem with this approach, apart from the fact that your developer colleagues might simply ignore the advice, is that objects can becreated in stealthy ways where the call to the constructor isnâ€™t immediately
+// obvious.This can be anythingâ€”copy constructor / assignment, a make_unique() call, or the use of an inversion of control(IoC) container.
 // you could create a single static global object, which is initialised once and only destroyed when the program terminates (this is how static objects work)
 // but this doesnt really prevent anyone from making another instance
 // we can implement this behaviour by including a static counter
@@ -224,6 +224,9 @@ struct Database {
 // the above interpretation fails to communicate that we dont want anyone calling the constructor more than once
 // The only way to prevent explicit construction of Database is to once again make its constructor privateand introduce the aforementioned function as a member function to return the one and only instance
 // deterministic just means reproducable resul, it will work the same way every time
+
+// The static objects are destructed in the reverse order of construction. And the order of construction is very hard to control. 
+// The only thing you can be sure of is that two objects defined in the same compilation unit will be constructed in the order of definition. Anything else is more or less random.
 
 struct DataBase {
 protected: 
