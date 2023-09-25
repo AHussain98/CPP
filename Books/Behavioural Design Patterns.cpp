@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <vector>
+
 
 // chain of responsibility
 // you have several different elements of a system who can all process a message one after another.As a concept, it’s rather easy to implement, since all that’s implied is the use of a list of some kind.
@@ -143,19 +145,285 @@ struct BankAccountCommand : Command {
 // the Command contains the account to act on, the action and the amount
 
 
-
-
-
 // Iterator pattern
-// 
+// An iterator is quite simply an object that can point to an element of a collection and also knows how to move to the next element in the collection
+// As such, it is only required to implement the ++ operator and the != operator (so you can compare two iterators and check if they point to the same thing).That’s it.
+// The function begin() exists as both a member function of vector and a global function.The global one is particularly useful for arrays(C - style) arrays, not std::array) because they cannot have member functions.
+// So begin() returns an iterator that you can think of as a pointer in the case of a vector, it has similar mechanics.
+// The iterator that we are given knows how to advance, that is, move to point to the next element. It’s important to realize that the ++ refers to the idea of moving forward, that is, it is not the same as a++ for pointers where you move forward in memory (i.e., increment a memory address) 
+// Now, the counterpart to begin() is, of course, end(), but it doesn’t point to the last element—instead, it points to the element after the last one.
+
+// traversing a binary tree
+template <typename T> 
+struct Node {
+	T value;
+	Node<T> * left = nullptr;
+	Node<T> * right = nullptr;
+	Node<T> * parent = nullptr;
+	BinaryTree<T>* tree = nullptr;
+};
+// every node has a reference to its left and right branches, its parent and the entire tree
+// a node can be constructed on its own or with a specification of its children
+
+// lets create a pre-order iterator
+template < typename U>
+struct PreOrderIterator
+{
+	Node<U>* current;
+
+	explicit PreOrderIterator(Node<U>* current) : current(current)
+	{ }
+
+	// other members here
+
+	// We need to define operator != to compare with other iterators.Since our iterator acts as a pointer, this is trivial :
+	 bool operator!=(const PreOrderIterator<U>&other)
+		{
+		 return current != other.current; }
+
+	 //	We also need the* operator for dereferencing :
+		 Node<U>&operator*() { return *current; }
+
+	PreOrderIterator<U>& operator++()
+	{
+		if (current->right)
+		{
+			current = current->right;
+			while (current->left)
+				current = current->left;
+		}
+		else
+		{
+			Node<T>* p = current->parent;
+			while (p && current == p->right)
+			{
+				current = p;
+				p = p->parent;
+			}
+			current = p;
+		}
+		return *this;
+	}
+};
+
 // Mediator
-// 
+// A large proportion of the code we write has different components (classes) communicating with one another through direct references or
+// pointers.However, there are situations when you don’t want objects to be necessarily aware of each other’s presence.Or, perhaps you do want them
+// to be aware of one another, but you still don’t want them to communicate through pointers or references because, well, those can go stale and you
+// don’t want to dereference a nullptr, do you ?
+// So the Mediator is a mechanism for facilitating communication between the components. Naturally, the mediator itself needs to be
+// accessible to every component taking part, which means it should either be a global static variable or , alternatively, just a reference that gets injected into every component.
+/* The Mediator design pattern essentially proposes an introduction of an 
+in-between component that everyone in a system has a reference to and 
+can use to communicate with one another. Instead of direct memory 
+addresses, communication can happen through identifiers (usernames, 
+unique IDs, etc).
+The simplest implementation of a mediator is a member list and a 
+function that goes through the list and does what it’s intended to do—
+whether on every element of the list or selectively.
+A more sophisticated implementation of Mediator can use events to 
+allow participants to subscribe (and unsubscribe) to things happening 
+in the system. This way, messages sent from one component to another 
+can be treated as events. In this set-up, it is also easy for participants to 
+unsubscribe to certain events if they are no longer interested in them or if 
+they are about to leave the system altogether.*/
+
+
 // Observer
-// 
+// Design pattern for notifying observing objects about a change made in another object
+
+struct Person : Observable<Person> {
+	int age;
+	Person(int age) : age(age){}
+
+	int get_age() const { return age; }
+	void set_age(const int value) {
+		if (this->age == age) return;
+		this->age = age;
+		notify(*this, "age");
+	}
+};
+
+// how do we know when a person's age changes? we don't 
+// we want to be informed on every write to a persons age
+
+// person now needs a private list of all the observers interested in Person's changes
+// Person should let the observers subscribe()/unsubscribe() to changes in Person
+// Inform all observers when a change is made with notify()
+// all this functionality can be moved into another class 
+
+template <typename T>
+struct Observable {
+	void notify(T& source, const std::string& name) { // notify gets called by the Person's set_age function
+		for (auto obs : observers) {
+			obs->field_changed(source, name);
+		}
+	}
+	void subscribe(Observer<T>*f) { observers.push_back(f); }
+	void unsubscribe(Observer<T>*f) { ... }
+ private:
+	 std::vector<Observer<T>*> observers; // made private since we don't want anyone touching this
+
+	};
+
+// subscribe just pushes back a pointer to the object we want to add to the list of watchers
+
+
+// lets create an Observer class
+
+template<typename T>
+struct Observer {
+	virtual void field_changed(T& source, const std::string& field_name) = 0;
+};
+// source is a reference to the object whose field actually changed, field_name is the field name that changed
+
+struct PersonObserver : Observer<Person> {
+	void field_changed(Person& source, const std::string& field_name) override {
+		std::cout << "Person's " << field_name << " has changed to " << source.get_age() << ".\n";
+	}
+};
+
+/* Let’s recap the main design decisions when implementing Observer:
+• Decide what information you want your observable to 
+communicate. For example, if you are handling field/
+property changes, you can include the name of the 
+property. You can also specify old/new values, but 
+passing the type could be problematic.
+• Do you want your observers to been tire classes, or are 
+you OK with just having a list of virtual functions?
+• How do you want to handle observers unsubscribing?
+– If you don’t plan to support unsubscription—
+congratulations, you’ll save a lot of effort implementing 
+the Observer, since there are no removal issues in 
+reentrancy scenarios.
+– If you plan to support an explicit unsubscribe() 
+function, you probably don’t want to erase-remove 
+right in the function, but instead mark your elements 
+for removal and remove them later.
+– If you don’t like the idea of dispatching on a (posibly 
+null) raw pointer, consider using a weak_ptr instead.
+• Is it likely that the functions of an Observer<T> will be 
+invoked from several different threads? If they are, you 
+need to protect your subscription list:
+– You can put a scoped_lock on all relevant functions; or
+– You can use a thread-safe collection such as the TBB/PPL 
+concurrent_vector. You lose ordering guarantees.
+• Are multiple subscriptions from the same source 
+allowed? If they are, you cannot use an std::set.
+There is, sadly, no ideal implementation of Observer that ticks all the boxes. 
+Whichever implementation you go for, some compromises are expected*/
+
 // State
 // 
 // Visitor
-// 
+// Once you’ve got a hierarchy of types, unless you have access to the source code, it is impossible to add a function to each member of the hierarchy.
+// This is a problem that requires some advance planning, and gives birth to the Visitor pattern
+// Visitor is a behavioral design pattern that allows adding new behaviors to existing class hierarchy without altering any existing code
+
+/**
+ * The Visitor Interface declares a set of visiting methods that correspond to
+ * component classes. The signature of a visiting method allows the visitor to
+ * identify the exact class of the component that it's dealing with.
+ */
+class ConcreteComponentA;
+class ConcreteComponentB;
+
+class Visitor {
+public:
+	virtual void VisitConcreteComponentA(const ConcreteComponentA* element) const = 0;
+	virtual void VisitConcreteComponentB(const ConcreteComponentB* element) const = 0;
+};
+
+/**
+ * The Component interface declares an `accept` method that should take the base
+ * visitor interface as an argument.
+ */
+
+class Component {
+public:
+	virtual ~Component() {}
+	virtual void Accept(Visitor* visitor) const = 0;
+};
+
+/**
+ * Each Concrete Component must implement the `Accept` method in such a way that
+ * it calls the visitor's method corresponding to the component's class.
+ */
+class ConcreteComponentA : public Component {
+	/**
+	 * Note that we're calling `visitConcreteComponentA`, which matches the
+	 * current class name. This way we let the visitor know the class of the
+	 * component it works with.
+	 */
+public:
+	void Accept(Visitor* visitor) const override {
+		visitor->VisitConcreteComponentA(this);
+	}
+	/**
+	 * Concrete Components may have special methods that don't exist in their base
+	 * class or interface. The Visitor is still able to use these methods since
+	 * it's aware of the component's concrete class.
+	 */
+	std::string ExclusiveMethodOfConcreteComponentA() const {
+		return "A";
+	}
+};
+
+class ConcreteComponentB : public Component {
+	/**
+	 * Same here: visitConcreteComponentB => ConcreteComponentB
+	 */
+public:
+	void Accept(Visitor* visitor) const override {
+		visitor->VisitConcreteComponentB(this);
+	}
+	std::string SpecialMethodOfConcreteComponentB() const {
+		return "B";
+	}
+};
+
+/**
+ * Concrete Visitors implement several versions of the same algorithm, which can
+ * work with all concrete component classes.
+ *
+ * You can experience the biggest benefit of the Visitor pattern when using it
+ * with a complex object structure, such as a Composite tree. In this case, it
+ * might be helpful to store some intermediate state of the algorithm while
+ * executing visitor's methods over various objects of the structure.
+ */
+class ConcreteVisitor1 : public Visitor {
+public:
+	void VisitConcreteComponentA(const ConcreteComponentA* element) const override {
+		std::cout << element->ExclusiveMethodOfConcreteComponentA() << " + ConcreteVisitor1\n";
+	}
+
+	void VisitConcreteComponentB(const ConcreteComponentB* element) const override {
+		std::cout << element->SpecialMethodOfConcreteComponentB() << " + ConcreteVisitor1\n";
+	}
+};
+
+class ConcreteVisitor2 : public Visitor {
+public:
+	void VisitConcreteComponentA(const ConcreteComponentA* element) const override {
+		std::cout << element->ExclusiveMethodOfConcreteComponentA() << " + ConcreteVisitor2\n";
+	}
+	void VisitConcreteComponentB(const ConcreteComponentB* element) const override {
+		std::cout << element->SpecialMethodOfConcreteComponentB() << " + ConcreteVisitor2\n";
+	}
+};
+/**
+ * The client code can run visitor operations over any set of elements without
+ * figuring out their concrete classes. The accept operation directs a call to
+ * the appropriate operation in the visitor object.
+ */
+void ClientCode(std::array<const Component*, 2> components, Visitor* visitor) {
+	// ...
+	for (const Component* comp : components) {
+		comp->Accept(visitor);
+	}
+	// ...
+}
+
 
 int main() {
 	Creature goblin{ "Goblin", 1, 1 };
@@ -171,4 +439,10 @@ int main() {
 	root.handle();
 	
 	std::cout << goblin.str() << std::endl;
+
+	 Person p{ 20 };
+	 PersonObserver cpo;
+	 p.subscribe(&cpo);
+	 p.set_age(21); // Person's age has changed to 21.
+	 p.set_age(22); // Person's age has changed to 22.
 }
