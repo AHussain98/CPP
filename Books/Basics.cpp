@@ -148,6 +148,22 @@ Chapter 11) has module linkage by default.
 from within the scope that applies to the name. All names that are defined within a
 block—local names, in other words—have no linkage.
 
+The static keyword can be used in four different ways:
+
+to create permanent storage for local variables in a function.
+to specify internal linkage.
+to declare member functions that act like non-member functions.
+to create a single copy of a data member.
+
+When a class is (intended as) an abstract class, a protected constructor is exactly right. In that situation you don't want objects to be instantiated from the class but only use it to inherit from.
+There are other uses cases, like when a certain set of construction parameters should be limited to derived classes.
+
+Non-public constructors are useful when there are construction requirements that cannot be guaranteed solely by the constructor. 
+For instance, if an initialization method needs to be called right after the constructor, or if the object needs to register itself with some container/manager object, this must be done outside the constructor. By limiting access to the constructor and providing only a factory method, you can ensure that any instance a user receives will fulfill all of its guarantees. This is also commonly used to implement a Singleton, which is really just another guarantee the class makes (that there will only be a single instance).
+
+The reason for making the constructor protected, rather than private, is the same as for making any other method or field protected instead of private: so that it can be inherited by children. Perhaps you want a public, non-virtual factory method in the base class, which returns references to instances of the derived classes; 
+the derived classes obviously want access to the parent constructors, but you still don't want to be creating them outside of your factory.
+
 */
 
 
