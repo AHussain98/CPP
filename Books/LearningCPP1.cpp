@@ -37,13 +37,59 @@ int apple_count{ 15 }; // braced initialization
 // sizeof() obtains the memory occupied by a data type, in bytes
 // sizeof() can be applied to any fundamental type, class type or pointer type
 
-// page 68
+// total = --count + 6;
+// Assuming count is 6 before this statement, the-- operator will decrement it to 5, and then this value
+// will be used to calculate the value to be stored in total, which will be 11.
+
+/* 
+The postfix form of ++ increments the variable to which it applies after its value is used in context. For 
+example, you can rewrite the earlier example as follows:
+total = count++ + 6;
+With an initial value of 5 for count, total is assigned the value 11. In this case, count will be 
+incremented to 6 only after being used in the surrounding expression. The preceding statement is thus 
+equivalent to the following two statements:
+total = count + 6;
+++count;
+*/
+
+// floating point types are always signed
+// to explicitly change the data type to a given type, you have to static_cast
+// its better to do std::round() from <cmath>
+
+// <ios> and <iomanip> contain stream manipulators that allow us to customise how output appears
+
+// cpp20 introduces the <format> module which contains even more optimisations
+// this works similarly to pythons old .format method for strings
+
+// cpp20 has <limits> which include infinity and the maxiumum storable sizes for data types
+
+// ints can be converted to chars
+
+/* Type wchar_t is a fundamental type intended for character sets where a single character does not fit 
+into one byte. Hence its name: wchar_t derives from wide character, because the character is “wider” than 
+the usual one-byte character. By contrast, type char is referred to as “narrow” because of the limited range of 
+character codes that are available.*/
 
 
+// the auto keyword tells the compiler to deduce the type of a variable
+/*  if your compiler properly supports C++17, you can use braced initialization to initialize any 
+variable with a single value, provided you do not combine it with an assignment. If your compiler is not fully upto-date yet, however, you should simply never use braced initializers with auto. Instead, either explicitly state 
+the type or use assignment or functional notation.*/
 
-
-
+// chapter 3
 
 int main() {
+	int x = 10;
+
+	double new_x{ static_cast<double>(x) }; // casted
+
+	std::cout << new_x << std::endl;
+
+	new_x += 1.1;
+
+	std::cout << new_x << std::endl;
+
+	char ch{ 56 }; // int implicitly converted to char
+	std::cout << ch << std::endl;
 
 }
