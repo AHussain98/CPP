@@ -1,4 +1,5 @@
 # include <iostream>
+# include <array>
 
 //  Unicode defines unique integer code values that represent characters for virtually all of the languages in the world as well as many specialized character sets.Code values
 // are referred to as code points.Unicode also defines how these code points may be encoded as byte sequences.
@@ -78,6 +79,112 @@ the type or use assignment or functional notation.*/
 
 // chapter 3
 
+// nested parenthesis are evaluated from innermost to outermost
+
+/* As their name suggests, bitwise operators enable you to operate on an integer variable at the bit level. You can 
+apply the bitwise operators to any type of integer, both signed and unsigned, including type char. However, 
+they’re usually applied to unsigned integer types. A typical application is to set individual bits in an integer 
+variable. Individual bits are often used as flags, which is the term used to describe binary state indicators. You 
+can use a single bit to store any value that has two states: on or off, male or female, true or false.*/
+
+/* The bitwise shift operators shift the contents of an integer variable by a specified number of bits to the left or 
+right. These are used in combination with the other bitwise operators to achieve the kind of operations we 
+described in the previous section. The >> operator shifts bits to the right, and the << operator shifts bits to the 
+left. Bits that fall off either end of the variable are lost.
+All the bitwise operations work with integers of any type */
+
+/*  Variables defined within a block that are not defined to be static have automatic 
+storage duration. They exist from the point at which they are defined until the end 
+of the block, which is the closing curly brace, }. They are referred to as automatic 
+variables or local variables. Automatic variables are said to have local scope or block 
+scope. All the variables you have created so far have been automatic variables.
+
+• Variables defined using the static keyword have static storage duration. They are 
+called static variables. Static variables exist from the point at which they are defined 
+and continue in existence until the program ends.
+
+• Variables for which you allocate memory at runtime have dynamic storage duration. 
+They exist from the point at which you create them until you release their memory to 
+destroy them. You'll learn how to create variables dynamically in Chapter 5.
+
+• Variables declared with the thread_local keyword have thread storage duration*/
+
+/* Remember that the lifetime and scope of a variable are different things. Lifetime is the period of 
+execution time over which a variable survives. Scope is the region of program code over which the variable 
+name can be used. It’s important not to get these two ideas confused.
+
+Global variables have static storage duration by default, so they exist from the start of the program until
+execution of the program ends. Initialization of global variables takes place before the execution of main()
+begins, so they’re always ready to be used within any code that’s within the variable’s scope. If you don’t
+initialize a global variable, it will be zero-initialized by default. This is unlike automatic variables, which
+contain garbage values when uninitialized
+
+we can access global variables by using the scope resolution operator with nothing coming before it
+
+
+*/
+
+// an enum is another data type, variables of this enumerates types can only have values from the set
+enum class days{Monday, Tuesday, Wednesday};  // enum called days, values are Monday, Tuesday, Wednesday
+
+days today{ days::Monday }; // today is a days object with the value Monday
+// when you reference an enumerator, it must be qualified by the type name
+// if you try to set the days object today to value that isnt in the enum list, the code won't compile
+// Each enumerator will be automatically defined to have a fixed integer value of type int by default. The first name in the list, Monday, will have the value 0, Tuesday will be 1, and so on,
+int global = 10;  // an example of a non-const global variable, which will have static storage
+
+/* Values for enumerators must 
+be compile-time constants, that is, constant expressions that the compiler can evaluate. Such expressions 
+include literals, enumerators that have been defined previously, and variables that you’ve specified as const. 
+You can’t use non-const variables, even if you’ve initialized them using a literal*/
+
+/* Enumeration types defined with enum class are called scoped enumerations. By default, you cannot 
+use their enumerators without specifying the type’s name as a scope. For instance, you could not 
+simply write today = Friday; you have to add Day:: as a scope. In C++20, you can 
+bypass this sometimes tedious requirement with a using enum or using declaration.*/
+
+// scoped enums won't convert into their integer forms without an explicit static cast
+// this is unlike previously used unscoped enums (without the class keyword)
+// unscoped enums can also be accessed without using thier scopes, more dangerous
+
+/* Just as with scoped enumerations, there are times were repeatedly specifying the name of a (nested) 
+namespace can become tedious, or even hamper code readability. You can eliminate the need to qualify 
+a specific name with the namespace in a source file with a using declaration. Here’s an example:
+using std::cout; // Make cout available without qualification
+This tells the compiler that when you write cout, it should be interpreted as std::cout. With this 
+declaration before the main() function definition, you can write cout instead of std::cout, which can 
+save typing and make the code look a little less cluttered */
+
+// Always use the using keyword to define a type alias. In fact, if it weren’t for legacy code, we’d be advising you to forget the keyword typedef even exists.
+
+/* If you cast true to an integer type, the result will be 1; casting false to an integer results in 0. 
+Conversely, you can also convert numerical values to type bool. Zero converts to false, and any nonzero 
+value converts to true. When you have a numerical value where a bool value is expected, the compiler will 
+insert an implicit conversion to convert the numerical value to type bool. This is useful in decision-making 
+code */
+
+// the <cctype> header inlcudes a bunch of fucntions for chars
+
+// && -> and, || -> or, ! -> not
+
+// bitwise operands cannot be used to short circuit if statements
+
+/*  You can only switch on values of integral (int, long, unsigned short, etc.), character (char, etc.), 
+and enumeration types. Technically, switching on Boolean values is allowed as well, but instead 
+of a switch on Booleans you should just use if/else statements. Unlike some other programming languages, 
+however, C++ does not allow you to create switch() statements with conditions and labels that contain 
+expressions of any other type. A switch that branches on different string values, for instance, is not allowed */
+
+// if you omit the break statement for a case, the statements for the following case will execute
+// each case value must be a constant expression, evaluated at compile time
+
+// the size of an array must always be a constant
+
+//  If the same constant is scattered around your code, it is easy to make a mistake by forgetting to update 
+// some of them.Therefore, define magic numbers, or any constant variable for that matter, only once.If you then
+// have to change the constant, you have to do so in only one place.
+
+
 int main() {
 	int x = 10;
 
@@ -92,4 +199,22 @@ int main() {
 	char ch{ 56 }; // int implicitly converted to char
 	std::cout << ch << std::endl;
 
+	int num = 10;
+	num >>= 1;  // bitwise shift right by 1 bit
+	std::cout << num << std::endl;
+
+	std::cout << ::global << std::endl;  // access the global variable using SRO
+
+	std::cout << "today's day is " << static_cast<int>(days::Monday) << std::endl;
+	int temperatures[10]{1,2,3,4,5,6,7,8,9,10}; // defines an array of 10 elements if doubles called temperatures
+	temperatures[0] = 1;  // change the value of an array element
+	std::cout << temperatures[0] << std::endl;
+
+	double test[5]; // test array with 5 elements
+	test[0] = 10.6;
+
+	for (int i = 0; i < 5; ++i) {
+		test[i] = temperatures[i]; // copy elements from temperatures to test
+	}
+	std::cout << std::size(test) << std::endl; // size of the array
 }
