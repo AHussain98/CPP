@@ -184,6 +184,43 @@ expressions of any other type. A switch that branches on different string values
 // some of them.Therefore, define magic numbers, or any constant variable for that matter, only once.If you then
 // have to change the constant, you have to do so in only one place.
 
+// continue is the keyword to skip this current iteration of the loop
+// break is the keyword to break out of the loop
+
+// for a char array to be treated as a string, it must be terminated by the null character
+// There must be a '\0' at the end. If there isn’t, the standard output stream will continue to output characters from successive memory locations,
+// which almost certainly contain garbage, until either a null character happens to turn up or an illegal memory access occurs
+
+/* An array of elements of type char can have a dual personality. It can simply be an array of characters, in 
+which each element stores one character, or it can represent a string. In the latter case, the characters in the 
+string are stored in successive array elements, followed by a special string termination character called the 
+null character that you write as '\0'. The null character marks the end of the string*/
+
+//  A two-dimensional array of type is char is interesting because it can be an array of C - style strings
+
+// The C++ standard does not permit an array dimension to be specified at runtime. That is, the array dimension must be a constant expression that can be evaluated by the compiler.H
+
+// cpp containers are compared element by element
+
+// using the array<> container carries no performance overhead at all compared to a standard array
+// vectors are dynamic arrays
+
+/* Every variable in your program is located somewhere in memory, so they all have a unique address that 
+identifies where they are stored. These addresses depend on where your program is loaded into memory 
+when you run it, so they may vary from one execution to the next. A pointer is a variable that can store an 
+address of another variable, of some piece of data elsewhere in memory. */
+
+// As a rule, you should always initialize a pointer when you define it. If you cannot give it its intended value yet, initialize the pointer to nullptr.
+
+// The address-of operator, &, is a unary operator that obtains the address of a variable.
+
+/* Applying the indirection operator, *, to a pointer accesses the contents of the memory location to which 
+it points. The name indirection operator stems from the fact that the data is accessed “indirectly.” The 
+indirection operator is often called the dereference operator as well, and the process of accessing the data in 
+the memory location pointed to by a pointer is termed dereferencing the pointer. To access the data at the 
+address contained in the pointer pnumber, you use the expression *pnumber. */
+
+
 
 int main() {
 	int x = 10;
@@ -217,4 +254,8 @@ int main() {
 		test[i] = temperatures[i]; // copy elements from temperatures to test
 	}
 	std::cout << std::size(test) << std::endl; // size of the array
+
+	std::array<int, 100> values; // array called values that stores 100 ints
+
+
 }
