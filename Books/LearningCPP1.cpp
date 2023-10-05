@@ -451,6 +451,407 @@ view a string's characters (hence the name), not to alter, add, or remove them.
 
 std::stoi() -> string to int
 
+A function with a return type other than void must return a value of the type specified in the function header.
+The only exception to this rule is the main() function, where, as you know, reaching the closing brace is
+equivalent to returning 0.
+
+When returned variable is a copy of the returned variable being returned is made
+automatically, and this copy is made available to the calling function. The general form of the return
+statement is as follows:
+
+return expression;
+
+expression must evaluate to a value of the type that is specified for the return value in the function
+header or must be convertible to that type. The expression can be anything, as long as it produces a value
+of an appropriate type. It can include function calls and can even include a call of the function
+
+There are two mechanisms by which arguments are passed to functions, pass-by-value and pass-byreference. We’ll explain the pass-by-value mechanism first.
+With the pass-by-value mechanism, the values of variables or constants you specify as arguments are not
+passed to a function at all. Instead, copies of the arguments are created, and these copies are transferred to
+the function. 
+
+When a function parameter is a pointer type, the pass-by-value mechanism operates just as before. However,
+a pointer contains the address of another variable; a copy of the pointer contains the same address and
+therefore points to the same variable.
+
+An array name is essentially an address, so you can pass the address of an array to a function just by using its
+name. The address of the array is copied and passed to the function. This provides several advantages:
+
+• First, passing the address of an array is an efficient way of passing an array to a
+function. Passing all the array elements by value would be time-consuming because
+every element would be copied. In fact, you can’t pass all the elements in an array by
+value as a single argument because each parameter represents a single item of data.
+
+• Second, and more significantly, because the function does not deal with the
+original array variable but with a copy, the code in the body of the function can
+treat a parameter that represents an array as a pointer in the fullest sense, including
+modifying the address that it contains. This means you can use the power of pointer
+notation in the body of a function for parameters that are arrays. Before we get to
+that, let’s try the most straightforward case first—handling an array parameter using
+array notation.
+
+As you may recall, a reference is an alias for another variable. You can specify a function parameter as a
+reference as well, in which case the function uses the pass-by-reference mechanism with the argument.
+When the function is called, an argument corresponding to a reference parameter is not copied. Instead,
+the reference parameter is initialized with the argument. Thus, it becomes an alias for the argument in the
+calling function. Wherever the parameter name is used in the body of the function, it is as if it accesses the
+argument value in the calling function directly.
+
+You specify a reference type by adding & after the type name. To specify a parameter type as “reference
+to string,” for example, you write the type as string&. Calling a function that has a reference parameter
+is no different from calling a function where the argument is passed by value. Using references, however,
+improves performance with objects such as type string. The pass-by-value mechanism copies the object,
+which would be time-consuming with a long string and memory-consuming as well for that matter. With a
+reference parameter, there is no copying.
+
+Always declare variables as const whenever their values are not supposed to change anymore after
+initialization. This will make your code more predictable and hence easier to read and less prone to subtle bugs.
+Moreover, and perhaps even more importantly, in your function signatures, always declare pointer or reference
+parameters with const as well if the function does not modify the corresponding arguments. First, this makes
+it easier for programmers to use your functions because they can easily understand what will or will not be
+modified by a function just by looking at its signature. Second, reference-to-const parameters allow your
+functions to be called with const values. As we will show in the next section, const values—which as you now
+know should be used as much as possible—cannot be assigned to a reference-to-non-const parameter.
+
+Input parameters should usually be references-to-const. Only smaller values, most notably those of
+fundamental types, should be passed by value. Use reference-to-non-const only for output parameters, and even
+then you should often consider returning a value instead. We’ll study how to return values from functions soon.
+
+in function parameters, implicit conversions are only supported for reference-to-const parameters, not for reference-tonon-const parameters.
+ you can also specify default values for parameters that are passed by reference-to-const in the same manner:
+void show_error(const std::string& message = "Program Error"); // Better...
+From what you learned in the previous section, it also should come as no surprise that default values for
+which the implicit conversion requires the creation of a temporary object—as is in our example—are illegal
+for reference-to-non-const parameters. Hence, the following should not compile:
+void show_error(std::string& message = "Program Error"); /* Does not compile 
+
+In this case, the compiler will deduce std::string as a return type, not std::string& .That is, a copy
+will be returned rather than a reference.If you want to return a reference for larger(), your options include
+the following :
+• Explicitly specify the std::string& return type as before.
+• Specify auto & instead of auto.Then the return type will always be a reference.
+While discussing all details and intricacies of C++ type deduction is well outside our scope, the good
+news is that one simple rule covers most cases :
+
+auto never deduces to a reference type, always to a value type.This implies that even when
+you assign a reference to auto, the value still gets copied.This copy will moreover not be const, unless you
+explicitly use const auto.To have the compiler deduce a reference type, you can use auto& or const auto &
+
+A static variable that you
+define within a function is created the first time its definition is executed. It then continues to exist until the
+program terminates. This means you can carry over a value from one call of a function to the next. To specify
+a variable as static, you prefix the type name in the definition with the static keyword.
+
+You can specify any type of variable as static, and you can use a static variable for anything that
+you want to remember from one function call to the next. You might want to hold on to the number of the
+previous file record that was read, for example, or the highest value of previous arguments.
+
+Function overloading allows several functions in a program to have the same name as long as they all
+have a parameter list that is different from each other. You learned earlier in this chapter that the compiler
+identifies a function by its signature, which is a combination of the function name and the parameter
+list. Overloaded functions have the same name, so the signature of each overloaded function must be
+differentiated by the parameter list alone. That allows the compiler to select the correct function for each
+function call based on the argument list. Two functions with the same name are different if at least one of the
+following is true:
+• The functions have different numbers of parameters.
+• At least one pair of corresponding parameters is of different types.
+■ Note The return type of a function is not part of the function’s signature. To decide which function overload
+to use, the compiler looks only at the number and types of the function parameters and arguments. If you
+declare two functions with the same name and parameter list but with a different return type, your program will
+fail to compile
+
+ Functions are self-contained compact units of code with a well-defined purpose.
+A well-written program consists of a large number of small functions, not a small
+number of large functions.
+• A function definition consists of the function header that specifies the function
+name, the parameters, and the return type, followed by the function body containing
+the executable code for the function.
+• A function prototype enables the compiler to process calls to a function even though
+the function definition has not been processed.
+• The pass-by-value mechanism for arguments to a function passes copies of the
+original argument values, so the original argument values are not accessible from
+within the function.
+• Passing a pointer to a function allows the function to change the value that is pointed
+to, even though the pointer itself is passed by value.
+• Declaring a pointer parameter as const prevents modification of the original value.
+• You can pass the address of an array to a function as a pointer. If you do, you should
+generally pass the array’s length along as well.
+• Specifying a function parameter as a reference avoids the copying that is implicit in
+the pass-by-value mechanism. A reference parameter that is not modified within a
+function should be specified as const.
+• Input parameters should be reference-to-const, except for smaller values such as
+those of fundamental types. Returning values is generally preferred over output
+parameters.
+• Specifying default values for function parameters allows arguments to be optionally
+omitted.
+• Returning a reference from a function allows the function to be used on the left of
+an assignment operator. Specifying the return type as a reference-to-const prevents
+this.
+• The signature of a function is defined by the function name together with the
+number and types of its parameters.
+• Overloaded functions are functions with the same name but with different
+signatures and therefore different parameter lists. Overloaded functions cannot be
+differentiated by the return type.
+• A recursive function is a function that calls itself. Implementing an algorithm
+recursively can result in elegant and concise code. Sometimes, but certainly not
+always, this is at the expense of execution time when compared to other methods of
+implementing the same algorithm.
+
+ There exist two other cases where a string_view is not exactly equivalent to const string.
+First, string_view does not provide a c_str() function to convert it to a const char* array. Luckily, it does
+share with std::string its data() function, though, which for most intents and purposes is equivalent.
+Second, string_views cannot be concatenated using the addition operator (+). To use a string_view value
+my_view in a concatenation expression, you have to convert it to a std::string first, for instance using
+std::string{my_view}
+
+ Use std::optional<> to represent any value that may or may not be present.
+Examples are optional inputs to a function or the result of a function that may fail.
+This makes your code self-documenting and therefore safer.
+• Use std::string_view instead of const std::string& to avoid inadvertent copies of
+string literals or other character arrays.
+• Use std::span<const T> instead of, for instance, const std::vector<T>&
+parameters to make the same function work as well for C-style arrays, std::array<>
+objects, etc.
+• Similarly, use std::span<T> instead of std::vector<T>& parameters, unless you
+need the ability to add or remove elements.
+• Use std::span<(const) T,N> instead of (const) std::array<T,N>& parameters to
+make the same function work for C-style arrays (or other containers you know to
+contain at least N elements).
+
+As soon as you add a constructor, any constructor, the compiler no longer implicitly defines a default default
+constructor. 
+We can still do this to get around that:
+ Box() = default; // Defaulted default constructor
+
+ This is more than just a different notation, though. When you initialize a member variable using an
+assignment statement in the body of the constructor, the member variable is created (using a constructor
+call if it is an instance of a class), after which the assignment is carried out as a separate operation. When
+you use an initialization list, the initial value is used to initialize the member variable as it is created. This
+can be a much more efficient process, particularly if the member variable is a class instance. This technique
+for initializing parameters in a constructor is important for another reason. As you’ll see, it is the only way of
+setting values for certain types of member variables.
+There is one small caveat to watch out for with initializer lists. The order in which the member variables
+are initialized is always determined by the order in which they are declared in the class definition—so not
+as you may expect by the order in which they appear in the member initializer list.
+
+ As a rule, it’s better to initialize all member variables either in-class or in the constructor’s member
+initializer list. This is generally more efficient. To avoid any confusion, you ideally put the member variables
+in the initializer list in the same order as they are declared in the class definition (some compilers will issue a
+warning if you don’t). You should initialize member variables in the body of the constructor only if more complex
+logic is required or if the order in which the variables are initialized is important.
+
+■ Tip Implicit conversions may lead to confusing code; most of the time it becomes far more obvious why
+code compiles and what it does if you use explicit conversions. By default, you should therefore declare singleargument constructors as explicit (note that this includes constructors with multiple parameters where at
+least all but the first have default values); omit explicit only if implicit type conversions are truly desirable.
+■ Note While less common, any constructor that is not a single-argument constructor can be marked
+as explicit as well. Suppose processBox() is a function with a single parameter of type Box or
+const Box&, then in modern C++ the expression processBox({ 1.0, 2.0, 3.0 }) is a valid shorthand for
+processBox(Box{ 1.0, 2.0, 3.0 }). To prohibit such shorthand notations, and thus to force the explicit
+mention of the Box type upon each construction, you can mark the ternary Box(double, double, double)
+constructor as explicit
+
+explicit keyword prevents any implicit conversions, useful for single argument constructors where this can happen
+
+ For const objects, you can only call const member functions. You should therefore specify all member
+functions that don’t change the object for which they are called as const.
+
+Specifying a member function as const effectively makes the this pointer const for that function
+
+■ Note To preserve const correctness, the following variation of a Box’s getters does not compile:
+// Attempt to return non-const references to member variables from const functions
+double& length() const { return m_length; }; // This must not be allowed to compile!
+double& width() const { return m_width; };
+double& height() const { return m_height; };
+Because these are const member functions, their implicit this pointers are of type const-pointer-to-Box
+(const Box*), which in turn makes the Box member variable names references-to-const within the scope of
+these member function definitions. From a const member function, you can thus never return a reference or
+a pointer to non-const parts of an object’s states. And this is a good thing. Otherwise, such members would
+provide a backdoor to modify a const object
+
+You can declare a whole class to be a friend of another class. All the member functions of a friend class have
+unrestricted access to all the members of the class of which it has been declared a friend.
+Or just declare a function to be friend in the class
+
+Static member variables of a class are used to provide class-wide storage of data that is independent of any
+particular object of the class type but is accessible by any of them. They record properties of the class as a
+whole, rather than of individual objects. When you declare a member variable of a class as static, the static
+member variable is defined only once and will exist even if no class objects have been created. Each static
+member variable is accessible in any object of the class and is shared among however many objects there
+are. An object gets its own independent copies of the ordinary member variables, but only one instance of
+each static member variable exists, regardless of how many class objects have been defined.
+
+Inline variables have been supported only since C++17. Before C++17, your only option was to
+declare s_object_count as follows (this syntax, of course, remains valid today as well):
+class Box
+{
+// ...
+private:
+ static size_t s_object_count;
+// ...
+};
+
+Doing so, however, creates somewhat of a problem. How do you initialize a noninline static member variable?
+You don’t want to initialize it in a constructor because you want to initialize it only once, not each time a
+constructor is called; and anyway, it exists even if no objects exist (and therefore no constructors have been
+called). The answer is to initialize each noninline static member outside the class with an extra clumsy
+definition such as this:
+
+size_t Box::s_object_count {}; // Initialize static member of Box class to 0
+
+This defines s_object_count; the line in the class definition only declares that it is a noninline static member
+of the class—a member that is to be defined elsewhere. Note that the static keyword must not be included in
+such an out-of-class definition. You do have to qualify the member name with the class name, Box, though, so
+that the compiler understands that you are referring to a static member of the class. Otherwise, you’d simply
+be creating a global variable that has nothing to do with the class.
+
+static inline size_t s_object_count {}; // Count of objects in existence
+
+A static member function is independent of any individual class object but can be invoked by any class object
+if necessary. It can also be invoked from outside the class if it is a public member. A common use of static
+member functions is to operate on static member variables, regardless of whether any objects of the class
+have been defined. In general:
+
+■ Tip If a member function does not access any nonstatic member variables, it may be a good candidate for
+being declared as a static member function
+
+■ Caution Static member functions cannot be const. Because a static member function isn’t associated with
+any class object, it has no this pointer, so const-ness doesn’t apply.
+
+A class provides a way to define your own data types. Classes can represent whatever
+types of objects your particular problem requires.
+
+• A class can contain member variables and member functions. The member functions
+of a class always have free access to the member variables of the same class.
+
+• Objects of a class are created and initialized using member functions called
+constructors. A constructor is called automatically when an object declaration is
+encountered. Constructors can be overloaded to provide different ways of initializing
+an object.
+
+• A copy constructor is a constructor for an object that is initialized with an existing
+object of the same class. The compiler generates a default copy constructor for a
+class if you don’t define one.
+
+• Members of a class can be specified as public, in which case they are freely
+accessible from any function in a program. Alternatively, they can be specified as
+private, in which case they may be accessed only by member functions, friends of
+the class, or members of nested classes.
+
+• Member variables of a class can be static. Only one instance of each static
+member variable of a class exists, no matter how many objects of the class are
+created.
+
+• Although static member variables of a class are accessible in a member function of
+an object, they aren’t part of the object and don’t contribute to its size.
+
+• Every non-static member function contains the pointer this, which points to the
+current object for which the function is called.
+
+• static member functions can be called even if no objects of the class have been
+created. A static member function of a class doesn’t contain the pointer this.
+
+• const member functions can’t modify the member variables of a class object unless
+the member variables have been declared as mutable.
+
+• Using references to class objects as arguments to function calls can avoid substantial
+overheads in passing complex objects to a function.
+
+• A destructor is a member function that is called for a class object when it is
+destroyed. If you don’t define a class destructor, the compiler supplies a default
+destructor.
+
+• A nested class is a class that is defined inside another class definition
+
+The copy assignment operator is called under different circumstances than the copy constructor. The
+following snippet illustrates this:
+Message beware {"Careful"};
+Message warning;
+warning = beware; // Calls the assignment operator
+Message otherWarning{warning}; // Calls the copy constructor
+
+On the third line, you assign a new value to a previously constructed object. This means that the
+assignment operator is used. On the last line, however, you construct an entirely new object as a copy of
+another. This is thus done using the copy constructor. If you do not use the uniform initialization syntax, the
+difference is not always that obvious. It is also legal to rewrite the last line as follows:
+
+Message otherWarning = warning; // Still calls the copy constructor
+
+Programmers sometimes wrongly assume that this form is equivalent to a copy assignment to an
+implicitly default-constructed Message object. But that’s not what happens. Even though this statement
+contains an equals sign, the compiler will still use the copy constructor here, not an assignment. Assignment
+operators come into play only when assigning to existing objects that were already constructed earlier.
+
+ To prevent copying, always delete both copy members. Deleting only the copy constructor or deleting
+only the copy assignment operator is rarely a good idea.
+
+• You can overload any number of operators within a class to provide class-specific
+behavior. You should do so only to make code easier to read and write.
+
+• Overloaded operators should mimic their built-in counterparts as much as possible.
+Popular exceptions to this rule are the << and >> operators for Standard Library
+streams and the + operator to concatenate strings.
+
+• Operator functions can be defined as members of a class or as global operator
+functions. You should use member functions whenever possible. You should resort
+to global operator functions only if there is no other way or if implicit conversions are
+desirable for the first operand.
+
+• For a unary operator defined as a class member function, the operand is the class
+object. For a unary operator defined as a global operator function, the operand is the
+function parameter.
+
+• For a binary operator function declared as a member of a class, the left operand
+is the class object, and the right operand is the function parameter. For a binary
+operator defined by a global operator function, the first parameter specifies the left
+operand, and the second parameter specifies the right operand.
+
+• If you overload operators == and <=>, you get operators !=, <, >, <=, and >= all for free.
+In many cases you can even have the compiler generate the code for you.
+
+• Functions that implement the overloading of the += operator can be used in the
+implementation of the + function. This is true for all op= operators.
+
+• To overload the increment or the decrement operator, you need two functions that
+provide the prefix and postfix form of the operator. The function to implement a
+postfix operator has an extra parameter of type int that serves only to distinguish the
+function from the prefix version.
+
+• To support customized type conversions, you have the choice between conversion
+operators or a combinatiomn of conversion constructors and assignment operators
+
+First let’s consider how private members of a base class are inherited in a derived class. Regardless
+of the base class access specifier (public, protected, or private), a private base class member always
+remains private to the base class. As you have seen, inherited private members are private members
+of the derived class, so they’re inaccessible outside the derived class. They’re also inaccessible to member
+functions of the derived class because they’re private to the base class.
+Now, let’s look into how public and protected base class members are inherited. In all the remaining
+cases, inherited members can be accessed by member functions of the derived class. The inheritance of
+public and protected base class members works like this:
+1. When the base class specifier is public, the access status of the inherited
+members remains unchanged. Thus, inherited public members are public, and
+inherited protected members are protected in a derived class.
+2. When the base class specifier is protected, both public and protected
+members of a base class are inherited as protected members.
+3. When the base class specifier is private, inherited public and protected
+members become private to the derived class, so they’re accessible by member
+functions of the derived class but cannot be accessed if they’re inherited in
+another derived class
+
+. Creating each Carton object always results
+in the default constructor of Box being called first, followed by the Carton class constructor.
+Derived class objects are always created this way, even when there are several levels of derivation.
+Every constructor of a derived class always starts by invoking a constructor of its base class. And that base
+class constructor then invokes the constructor of its base class, and so on, until a class is reached that is not
+derived from any other class. The effect is that the first constructor to be fully evaluated is that of the most
+base class constructor, followed by the constructor for the class derived from that, and so on, until finally the
+constructor for the most derived class is evaluated. This makes sense if you think about it. A derived class
+object has a complete base class object inside it, and this needs to be created before the rest of the derived
+class object. If that base class is derived from another class, the same applies
+
+The order of destructor calls for a derived class object is the reverse of the constructor call sequence for the
+object. The derived class destructor is called first, and then the base class destructor is called,
+
+
 
 */
 
