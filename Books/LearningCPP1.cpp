@@ -851,6 +851,458 @@ class object. If that base class is derived from another class, the same applies
 The order of destructor calls for a derived class object is the reverse of the constructor call sequence for the
 object. The derived class destructor is called first, and then the base class destructor is called,
 
+Every derived class object has a base class object inside it waiting to get out. Conversions from a derived type
+to its base are always legal and automatic. Here’s a definition of a Carton object:
+Carton carton{40, 50, 60, "Corrugated fiberboard"};
+We have already seen two ways this object can be converted to a base class object of type Box. The first is
+by means of a copy constructor:
+Box box{carton};
+
+And the second is a copy assignment:
+Box box;
+box = carton;
+Both convert the carton object to a new object of type Box and store a copy of it in box. The assignment
+operator that is used is the default assignment operator for the Box class. Of course, only the Box subobject
+part of carton is used; a Box object has no room for the Carton-specific member variables. This effect is
+called object slicing, as the Carton specific portion is sliced off, so to speak, and discarded.
+
+Inheritance is a fundamental characteristic of objectoriented programming, and it makes polymorphism possible (polymorphism is the subject of the next
+chapter). The important points to take from this chapter include the following:
+• A class may be derived from one or more base classes, in which case the derived
+class inherits members from all of its bases.
+• Single inheritance involves deriving a class from a single base class. Multiple
+inheritance involves deriving a class from two or more base classes.
+• Access to the inherited members of a derived class is controlled by two factors: the
+access specifier of the member in the base class and the access specifier of the base
+class in the derived class declaration.
+
+• A constructor for a derived class is responsible for initializing all members of the
+class. This normally involves invoking a constructor of the base class to initialize all
+inherited members.
+• Creation of a derived class object always involves the constructors of all of the direct
+and indirect base classes, which are called in sequence (from the most base through
+to the most direct) prior to the execution of the derived class constructor.
+• A derived class constructor can, and often should, explicitly call constructors for its
+direct bases in the initialization list for the constructor. If you don’t call one explicitly,
+the base class’s default constructor is called. A copy constructor in a derived class, for
+one, should always call the copy constructor of all direct base classes.
+• A member name declared in a derived class, which is the same as an inherited
+member name, will hide the inherited member. To access the hidden member, use
+the scope resolution operator to qualify the member name with its class name.
+• You can use using not only for type aliases but also to inherit constructors (always
+with the same access specification as in the base class), to modify the access
+specifications of other inherited members, or to inherit functions that would
+otherwise be hidden by a derived class’s function with the same name but different
+signature.
+• When a derived class with two or more direct base classes contains two or more
+inherited subobjects of the same class, the duplication can be prevented by declaring
+the duplicated class as a virtual base class.
+
+ In C++, polymorphism always involves the use of a pointer or a reference to an object to call a member function. Polymorphism only operates with classes that share a common base class.
+
+ w an object of a derived class type contains a subobject of the base class
+type. In other words, you can regard every derived class object as a base class object. Because of this, you
+can always use a pointer to a base class to store the address of a derived class object; in fact, you can use a
+pointer to any direct or indirect base class to store the address of a derived class object
+The reverse is not true.
+
+A function that you specify as virtual in a base class will be virtual in all classes that are directly or
+indirectly derived from the base. This is the case whether or not you specify the function as virtual in a
+derived class. To obtain polymorphic behavior, each derived class may implement its own version of the
+virtual function
+
+Note that a call to a virtual function using an object is always resolved statically. You only get dynamic
+resolution of calls to virtual functions through a pointer or a reference. Storing an object of a derived class
+type in a variable of a base type will result in the derived class object being sliced, so it has no derived class
+characteristics
+
+If a member function definition is outside the class definition, you must not add the virtual
+keyword to the function definition; it would be an error to do so. You can only add virtual to declarations or
+definitions inside a class definition
+
+For a function to behave “virtually,” its definition in a derived class must have the same signature as it has in
+the base class. If the base class function is const, for instance, then the derived class function must therefore
+also be const. Generally, the return type of a virtual function in a derived class must be the same as that
+in the base class as well, but there’s an exception when the return type in the base class is a pointer or a
+reference to a class type. In this case, the derived class version of a virtual function may return a pointer or a
+reference to a more specialized type than that of the base. We won’t be going into this further, but in case you
+come across it elsewhere, the technical term used in relation to these return types is covariance
+
+static member functions cannot be virtual. As their name suggests, calls of static functions are
+always resolved statically. Even if you call a static member function on a polymorphic object, the member
+function is resolved using the static type of the object. This gives us yet another reason to always call static
+member functions by prefixing them with the class name instead of that of an object. That is, always use
+MyClass::myStaticFunction() instead of myObject.myStaticFunction(). This makes it crystal clear not to
+expect polymorphism
+
+The override specification, like the virtual one, only appears within the class definition. It must not
+be applied to an external definition of a member function. The override specification causes the compiler to
+verify that the base class declares a class member that is virtual and has the same signature. If it doesn’t, the
+compiler flags the definition containing the override specification as an error (give it a try!).
+■ Tip Always add an override specification to the declaration of a virtual function override. First, this
+guarantees that you have not made any mistakes in the function signatures at the time of writing. Second, and
+perhaps even more important, it safeguards you and your team from forgetting to change any existing function
+overrides when the signature of the base class function changes
+
+In principle you could declare a member function that is both virtual and final even if it does not
+override any base class member. This would be self-contradictory, though. You add virtual to allow function
+overrides, and you add final to prevent them. Note that there is no contradiction in combining override and
+final. This just states that you disallow any further overrides of the function you are overriding.
+
+In a way, private virtual functions give you the best of two worlds. On one hand, the function is
+private, meaning it cannot be called from outside your class. On the other hand, the function is virtual,
+allowing derived classes to override and customize its behavior. In other words, even though you facilitate
+polymorphism, you are still in perfect control where and when such a private virtual member function
+is called. This function could be a single step in a more complex algorithm, a step that is to be executed
+only after all the previous steps of the algorithm have been correctly performed. Or it could be a function
+that must to be called only after acquiring a particular resource, for instance after performing the necessary
+thread synchronization.
+
+To ensure that the correct destructor is always called for objects of derived classes that are allocated in the
+free store, you need virtual class destructors. To implement a virtual destructor in a derived class, you just
+add the keyword virtual to the destructor declaration in the base class. This signals to the compiler that
+destructor calls through a pointer or a reference parameter should have dynamic binding, so the destructor
+that is called will be selected at runtime. This makes the destructor in every class derived from the base class
+virtual, in spite of the derived class destructors having different names; destructors are treated as a special
+case for this purpose.
+
+A dynamic cast is a conversion that’s performed at runtime. The dynamic_cast<>() operator performs a
+dynamic cast. You can only apply this operator to pointers and references to polymorphic class types, which
+are class types that contain at least one virtual function. The reason is that only pointers to polymorphic
+class types contain the information that the dynamic_cast<>() operator needs to check the validity of the
+conversion. This operator is specifically for the purpose of converting between pointers or references to class
+types in a hierarchy. Of course, the types you are casting between must be pointers or references to classes
+within the same class hierarchy. You can’t use dynamic_cast<>() for anything else.
+
+■ Caution Virtual function calls made from inside a constructor or a destructor are always resolved statically.
+If you, in rare cases, do need polymorphic calls during initialization, you should do so from within an init()
+member function—often virtual itself—that you then call after the construction of the object has completed.
+This is called the dynamic binding during initialization idiom
+
+You pay for
+polymorphism in two ways: it requires more memory, and virtual function calls result in additional runtime
+overhead. These consequences arise because of the way that virtual function calls are typically implemented
+in practice. Luckily, both costs are mostly marginal at best and can mostly be ignored.
+For instance, suppose two classes, A and B, contain identical member variables, but A contains virtual
+functions, whereas B’s functions are all nonvirtual. In this case, an object of type A requires more memory
+than an object of type B.
+■ Note You can create a simple program with two such class objects and use the sizeof operator to see the
+difference in memory occupied by objects with and without virtual functions
+.
+The reason for the increase in memory is that when you create an object of a polymorphic class type, a
+special pointer is created in the object. This pointer is used to call any of the virtual functions in the object.
+The special pointer points to a table of function pointers that gets created for the class. This table, usually
+called a vtable, has one entry for each virtual function in the class.
+
+When a function is called through a pointer to a base class object, the following sequence of events occurs:
+1. The pointer to the vtable in the object pointed to is used to find the beginning of
+the vtable for the class.
+2. The entry for the function to be called is found in the vtable, usually by
+using an offset.
+3. The function is called indirectly through the function pointer in the vtable. This
+indirect call is a little slower than a direct call of a nonvirtual function, so each
+virtual function call carries some overhead.
+However, the overhead in calling a virtual function is small and shouldn’t give you cause for concern.
+A few extra bytes per object and slightly slower function calls are small prices to pay for the power and
+flexibility that polymorphism offers. This explanation is just so you’ll know why the size of an object that has
+virtual functions is larger than that of an equivalent object that doesn’t.
+■ Note The only time you should even debate whether the overhead of a virtual function table pointer is
+worth it is when you have to manage many objects of the corresponding type at once. Suppose you have a
+Point3D class that represents a point in 3D space. If your program manipulates millions and millions of such
+points—a Microsoft Kinect, for instance, produces up to 9 million points per second—then avoiding virtual
+functions in Point3D can save you a significant amount of memory. For most objects, the cost of a virtual
+function table pointer is only marginal, though, and well worth the benefits
+
+The purpose of a pure virtual function is to enable the derived class versions of the function to be called
+polymorphically. To declare a pure virtual function rather than an “ordinary” virtual function that has a
+definition, you use the same syntax but add = 0 to its declaration within the class
+
+This raises the question, “If you can’t create an instance of an abstract class, then why does the abstract
+class contain a constructor?” The answer is that the constructor for an abstract class is there to initialize
+its member variables. The constructor for an abstract class will be called by a derived class constructor,
+implicitly or from the constructor initialization list. If you try to call the constructor for an abstract class from
+anywhere else, you’ll get an error message from the compiler.
+Because the constructor for an abstract class can’t be used generally, it’s a good idea to declare it as
+a protected member of the class,
+
+Polymorphism involves calling a (virtual) member function of a class through
+a pointer or a reference and having the call resolved dynamically. That is, the
+particular function to be called is determined by the object that is pointed to or
+referenced when the program is executing.
+• A function in a base class can be declared as virtual. All occurrences of the function
+in classes that are derived from the base will then be virtual too.
+• You should always declare the destructor of classes intended to be used as a base
+class as virtual (often this can be done in combination with = default). This
+ensures correct selection of a destructor for dynamically created derived class
+objects. It suffices to do so for the most base class, but it does not hurt to do it
+elsewhere either.
+• You should use the override qualifier with each member function of a derived class
+that overrides a virtual base class member. This causes the compiler to verify that
+the functions signatures in the base and derived classes are, and forever remain, the
+same.
+• The final qualifier may be used on an individual virtual function override to signal
+that it may not be overridden any further. If an entire class is specified to be final,
+no derived classes can be defined for it anymore.
+• Default argument values for parameters in virtual functions are assigned statically,
+so if default values for a base version of a virtual function exist, default values
+specified in a derived class will be ignored for dynamically resolved function calls.
+• The dynamic_cast<> operator is generally used to cast from a pointer-to-apolymorphic-base-class to a pointer-to-a-derived-class. If the pointer does not point
+to an object of the given derived class type, dynamic_cast<> evaluates to nullptr.
+This type check is performed dynamically, at runtime.
+• A pure virtual function has no definition. A virtual function in a base class can be
+specified as pure by placing = 0 at the end of the member function declaration.
+• A class with one or more pure virtual functions is called an abstract class, for
+which no objects can be created. In any class derived from an abstract class, all the
+inherited pure virtual functions must be defined. If they’re not, it too becomes an
+abstract class, and no objects of the class can be created
+
+ The golden rule for exceptions is to always throw by value and catch by reference (reference-to-const,
+normally). In other words, you mustn’t throw a new’ed exception (and definitely no pointer to a local object), nor
+should you ever catch an exception object by value. Obviously, catching by value would result in a redundant
+copy, but that’s not the worst of it. Catching by value may slice off parts of the exception object. The reason this
+is so important is that this might slice off precisely that valuable piece of information that you need to diagnose
+which error occurred and why
+
+With exceptions that are basic types (rather than class types), an exact type match with the parameter in
+the catch block is necessary. With exceptions that are class objects, implicit conversions may be applied to
+match the exception type with the parameter type of a handler. When the parameter type is being matched
+to the type of the exception that was thrown, the following are considered to be a match:
+• The parameter type is the same as the exception type, ignoring const.
+• The type of the parameter is a direct or indirect base class of the exception class type,
+or a reference to a direct or indirect base class of the exception class, ignoring const.
+• The exception and the parameter are pointers, and the exception type can be
+converted implicitly to the parameter type, ignoring const.
+The possible type conversions listed here have implications for how you sequence the catch blocks for
+a try block. If you have several handlers for exception types within the same class hierarchy, then the most
+derived class type must appear first and the most base class type last. If a handler for a base type appears
+before a handler for a type derived from that base, then the base type is always selected to handle the derived
+class exceptions. In other words, the handler for the derived type is never executed.
+
+Let’s add a couple more exception classes to the module containing the Trouble class and use Trouble
+as a base class for them. Here’s how the contents of the module file will look with the extra classes defined:
+// troubles.cppm - Exception classes
+export module troubles;
+import <string>;
+import <string_view>;
+export class Trouble
+{
+public:
+ explicit Trouble(std::string_view message = "There's a problem")
+ : m_message {message}
+ {}
+ virtual ~Trouble() = default; // Base classes must have a virtual destructor!
+ virtual std::string_view what() const { return m_message; }
+private:
+ std::string m_message;
+};
+// Derived exception class
+export class MoreTrouble : public Trouble
+{
+public:
+ explicit MoreTrouble(std::string_view str = "There's more trouble...")
+ : Trouble {str}
+ {}
+};
+// Derived exception class
+export class BigTrouble : public MoreTrouble
+{
+public:
+ explicit BigTrouble(std::string_view str = "Really big trouble...")
+ : MoreTrouble {str}
+ {}
+};
+Note that the what() member and the destructor of the base class have been declared as virtual.
+Therefore, the what() function is also virtual in the classes derived from Trouble. It doesn’t make much
+of a difference here, but it would in principle allow derived classes to redefine what(). Remembering to
+declare a virtual destructor in a base class is important, though. Other than different default strings for the
+message, the derived classes don’t add anything to the base class. Often, just having a different class name
+can differentiate one kind of problem from another. You just throw an exception of a particular type when
+that kind of problem arises; the internals of the classes don’t have to be different. Using a different catch
+block to catch each class type provides the means to distinguish different problems. Here’s the code to throw
+exceptions of the Trouble, MoreTrouble, and BigTrouble types, as well as the handlers to catch them:
+// Ex16_03.cpp
+// Throwing and catching objects in a hierarchy
+import <iostream>;
+import troubles;
+
+int main()
+{
+ for (int i {}; i < 7; ++i)
+ {
+ try
+ {
+ if (i == 3)
+ throw Trouble{};
+ else if (i == 5)
+ throw MoreTrouble{};
+ else if (i == 6)
+ throw BigTrouble{};
+ }
+ catch (const BigTrouble& t)
+ {
+ std::cout << "BigTrouble object caught: " << t.what() << std::endl;
+ }
+ catch (const MoreTrouble& t)
+ {
+ std::cout << "MoreTrouble object caught: " << t.what() << std::endl;
+ }
+ catch (const Trouble& t)
+ {
+ std::cout << "Trouble object caught: " << t.what() << std::endl;
+ }
+ std::cout << "End of the for loop (after the catch blocks) - i is " << i << std::endl;
+ }
+}
+
+Here’s the output:
+End of the for loop (after the catch blocks) - i is 0
+End of the for loop (after the catch blocks) - i is 1
+End of the for loop (after the catch blocks) - i is 2
+Trouble object caught: There's a problem
+End of the for loop (after the catch blocks) - i is 3
+End of the for loop (after the catch blocks) - i is 4
+MoreTrouble object caught: There's more trouble...
+End of the for loop (after the catch blocks) - i is 5
+BigTrouble object caught: Really big trouble...
+End of the for loop (after the catch blocks) - i is 6
+
+Inside the for loop, objects of type Trouble, MoreTrouble, and BigTrouble are thrown as an exception.
+These objects are constructed at the moment they are thrown, as is often the case with exceptions. The type
+of object that is thrown depends on the value of the loop variable, i. Each of the catch blocks contains a
+different message, so the output shows which catch handler is selected when an exception is thrown. In
+the handlers for the two derived types, the inherited what() function still returns the message. Note that the
+parameter type for each of the catch blocks is a reference, as in the previous example. One reason for using
+a reference is to avoid making an unnecessary copy of the exception object. In the next example, you’ll see
+another, more crucial reason why you should always use a reference parameter in a handler
+
+Exceptions of derived class types are implicitly converted to a base class type for the purpose of matching
+a catch block parameter, so you could catch all the exceptions thrown in the previous example with a
+single handler
+
+If a thrown exception is not caught, either directly or indirectly (that is, it does not have to be caught within
+the same function, as we discussed earlier), then the program is terminated instantly. And you really should
+expect such a termination to be fairly abrupt. Destructors for static objects will not get called anymore, for
+one; there is no guarantee that the destructors of any objects still allocated on the call stack will be executed.
+In other words, the program essentially instantly crashes.
+■ Note In actuality, if an exception goes uncaught, the Standard Library function std::terminate() is called
+(declared in the <exception> module), which in turn by default calls std::abort() (declared in <cstdlib>), which
+then terminates the program. This sequence of events for an uncaught exception is shown in Figure 16-7.
+It is technically possible to override the behavior of std::terminate() by passing a function pointer to
+std::set_terminate(). However, this is rarely recommended and should be reserved for (pun intended…)
+exceptional cases. There is also not that much you are allowed to do in a terminate handler. Acceptable uses
+include making sure that certain critical resources are properly cleaned up or writing a so-called crash dump
+that your customers can then send to you for further diagnosis. These topics are too advanced for this book
+to warrant further discussion though. One thing you must never do is attempt to keep your program running
+after std::terminate() is called! std::terminate(), by definition, is invoked after an irrecoverable error;
+any attempt to recover results in undefined behavior. Your terminate handler must always end with one of two
+function calls: either std::abort() or std::_Exit().
+
+ Both functions end the program without performing
+any further cleanup (the difference between the two is that with the latter you can decide which error code the
+process returns to the environment).
+
+■ Caution If your code will throw exceptions of different types, it may be tempting to use a catch-all block to
+catch them all at once. After all, it’s less work than enumerating catch blocks for every possible exception type.
+Similarly, if you’re calling functions that you’re less familiar with, quickly adding a catch-all block is much easier
+than researching which exception types these functions may throw. This is rarely the best approach though. A
+catch-all block risks catching exceptions that need more specific handling, or sweeping unexpected, dangerous
+errors under the rug. They also do not allow for much error logging or diagnosis. All too often we encounter
+patterns such as this in code:
+try
+{
+ doSomething();
+}
+catch (...)
+{
+ // Oops. Something went wrong... Let's ignore what happened and cross our fingers...
+}
+The comments usually don’t actually contain the part about ignoring the error and crossing your fingers,
+but they might as well. The motivation behind such patterns is generally “Anything is better than uncaught
+exceptions.” The truth of the matter is that this is mostly just a symptom of a lazy programmer. There is no
+substitute for proper, thought-through error-handling code when it comes to delivering stable, fault-tolerant
+programs. And like we said in the introduction of this chapter, writing error-handling and recovery code will
+take time. So while catch-all blocks may be tempting shortcuts, it’s usually preferred to explicitly check which
+
+exception types may be raised by the functions that you call and, for each, to consider whether you should add
+a catch block and/or leave it to a calling function to handle the exception. Once you know the exception type,
+you can usually extract more useful information from the object (like with the what() function of our Trouble
+class) and use this for proper error handling and logging. Note also that, especially during development, a
+program crash is actually better than a catch-all. Then at least you learn about potential errors, instead of
+blindly ignoring them, and can adjust your code to properly prevent them or recover from them.
+Make no mistake, we do not mean to say that catch-all blocks should never be used—they certainly have their
+uses. Catch-all blocks that rethrow after some logging or cleanup, for instance, can be particularly useful. We
+just want to caution you against using them as an easy, subpar substitute for more targeted error handling.
+
+If you see a noexcept in a function’s header, you can be sure that this function will never throw an
+exception. The compiler makes sure that if a noexcept function does unwittingly throw an exception that’s
+not caught within the function itself, the exception will not be propagated to the calling function at runtime.
+Instead, the C++ program will treat this as an irrecoverable error and call std::terminate(). As discussed
+earlier in this chapter, std::terminate() always results in an abrupt termination of the process.
+Note that this does not mean that no exceptions are allowed to be thrown within the function itself;
+it only means that no exception will ever escape the function. That is, if an exception is thrown during the
+execution of a noexcept function, it must be caught somewhere within that function and not rethrown. 
+
+Starting with C++11, destructors are normally implicitly noexcept. Even if you define a destructor without a
+noexcept specification, the compiler will normally add one implicitly. This means that should the destructor
+of the following class be executed, the exception will never leave the destructor. Instead, std::terminate()
+shall always be called (in accordance with the implicit noexcept specifier added by the compiler):
+
+It is in principle possible to define a destructor from which exceptions may be thrown. You could do so
+by adding an explicit noexcept(false) specification. But since you should normally never do this,2
+ we won’t
+discuss or consider this possibility any further.
+■ Tip  Never allow an exception to leave a destructor. All destructors are normally3 noexcept, even if not
+specified as such explicitly, so any exception they throw will trigger a call to std::terminate().
+
+One of the hallmarks of modern C++ is the so-called RAII idiom, short for “resource acquisition is
+initialization.” Its premise is that each time you acquire a resource you should do so by initializing an object.
+Memory in the free store is a resource, but other examples include file handles (while holding these, other
+processes often may not access a file), mutexes (used for synchronization in concurrent programming),
+network connections, and so on. As per RAII, every such resource should be managed by an object, either
+allocated on the stack or as a member variable. The trick to avoid resource leaks is then that, by default, the
+destructor of that object makes sure the resource is always freed.
+
+The body of main() is a try block, and its catch block catches any type of exception that has
+std::exception as a base.
+
+When throwing exceptions, always throw objects, never fundamental types. And the class of these
+objects should always derive from std::exception, either directly or indirectly. Even if you declare your own
+application-specific exception hierarchies—which often is a good idea—you should use std::exception or
+one of its derived classes as the base class. Many popular C++ libraries already follow this same guideline.
+Using only a single, standardized family of exceptions makes it much easier to catch and handle these
+exceptions.
+Summary
+Exceptions are an integral part of programming in C++. Several operators throw exceptions, and you’ve seen
+that they’re used extensively within the Standard Library to signal errors. Therefore, it’s important that you
+have a good grasp of how exceptions work, even if you don’t plan to define your own exception classes. The
+important points that we’ve covered in this chapter are as follows:
+• Exceptions are objects that are used to signal errors in a program.
+• Code that may throw exceptions is usually contained within a try block, which
+enables an exception to be detected and processed within the program.
+• The code to handle exceptions that may be thrown in a try block is placed in one or
+more catch blocks that must immediately follow the try block.
+• A try block, along with its catch blocks, can be nested inside another try block.
+• A catch block with a parameter of a base class type can catch an exception of a
+derived class type.
+• A catch block with the parameter specified as an ellipsis will catch an exception of
+any type.
+• If an exception isn’t caught by any catch block, then the std::terminate() function
+is called, which immediately aborts the program execution.
+• Every resource, including dynamically allocated memory, should always be acquired
+and released by an RAII object. This implies that, as a rule, you should normally no
+longer use the keywords new and delete in modern C++ code.
+• The Standard Library offers various RAII types you should use consistently; the ones
+you already know about include std::unique_ptr<>, shared_ptr<>, and vector<>.
+• The noexcept specification for a function indicates that the function does not
+throw exceptions. If a noexcept function does throw an exception it does not catch,
+std::terminate() is called.
+• Even if a destructor does not have an explicit noexcept specifier, the compiler will
+almost always generate one for you. This implies that you must never allow an
+exception to leave a destructor; otherwise, std::terminate() will be triggered.
+• The Standard Library defines a range of standard exception types in the <stdexcept>
+module that are derived from the std::exception class that is defined in the
+<exception> module
+
 
 
 */
