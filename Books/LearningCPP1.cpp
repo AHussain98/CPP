@@ -1303,6 +1303,350 @@ exception to leave a destructor; otherwise, std::terminate() will be triggered.
 module that are derived from the std::exception class that is defined in the
 <exception> module
 
+Every single expression is either an lvalue or an rvalue (sometimes written l-value and r-value and
+pronounced like that). An lvalue evaluates to some persistent value with an address in memory in which
+you can store something on an ongoing basis; an rvalue evaluates to a result that is stored only transiently.
+Historically, lvalues and rvalues are so called because an lvalue expression typically appears on the left of an
+assignment operator, whereas an rvalue could appear only on the right side. If an expression is not an lvalue,
+it is an rvalue.
+ An expression that consists of a single variable name is always an lvalue.
+
+ Most function call expressions are rvalues. Only function calls that return a reference are lvalues.
+One indication for the latter is that function calls that return a reference can appear on the left side of a built-in
+assignment operator just fine. Prime examples are the subscript operators (operator[]()) and at() functions
+of your typical container. If v is a vector<int>, for example, both v[1] = -5; and v.at(2) = 132; would make
+for perfectly valid statements. v[1] and v.at(2) are therefore clearly lvalues.
+When in doubt, another good guideline to decide whether a given expression is either an lvalue or an
+rvalue is the following. If the value that it evaluates to persists long enough for you to take and later use its
+address, then that value is an lvalue. Here’s an example (a, b, and c are ints as before, and v a vector<int>):
+int* x = &(b + c); // Error!
+int* y = &std::abs(a * c); // Error!
+int* z = &123; // Error!
+int* w = &a; // Ok!
+int* u = &v.at(2); // Ok! (u contains the address of the third value in v)
+
+A reference is a name that you can use as an alias for something else. What you don’t know yet—how could you?—is that there are actually two kinds of references:
+lvalue references and rvalue references.
+All references that you’ve worked with thus far are lvalue references. Normally, an lvalue reference
+is an alias for another variable; it is called an lvalue reference because it normally refers to a persistent
+storage location in which you can store data so it can appear on the left of an assignment operator. We say
+“normally” because C++ does allow reference-to-const lvalue references—so variables of type const T&—to
+be bound to temporary rvalues as well. 
+An rvalue reference can be an alias for a variable, just like an lvalue reference, but it differs from an
+lvalue reference in that it can also reference the outcome of an rvalue expression, even though this value
+is generally transient. Being bound to an rvalue reference extends the lifetime of such a transient value. Its
+memory will not be discarded as long as the rvalue reference is in scope. You specify an rvalue reference
+type using two ampersands following the type name. Here’s an example:
+int count {5};
+int&& rtemp {count + 3}; // rvalue reference
+std::cout << rtemp << std::endl; // Output value of expression
+int& rcount {count}; // lvalue reference
+This code will compile and execute, but of course it is definitely not the way to use an rvalue reference,
+and you should never code like this.
+
+A shallow copy simply copies all members of an object one by one, even if these members are pointers to dynamic memory. A deep
+copy, on the other hand, copies all dynamic memory referred to by any of its pointer members as well.
+
+s: You can turn any lvalue into an rvalue reference simply by applying
+one of C++11’s most vital Standard Library functions: std::move().
+2
+ To see its effect, you should first replace
+the final two lines of main() in Ex18_03.cpp with the following and then run the program again (you can find
+this variant in Ex18_04):
+ ...
+ Array<std::string> more_strings{ 2'000 };
+ strings = std::move(more_strings); // Move more_strings into strings
+}
+If you do, you will notice that more_strings is indeed no longer copied:
+Array of 1000 elements moved (assignment)
+Array of 2000 elements moved (assignment
+
+No discussion of std::move() is complete without an honorary mention of std::unique_ptr<>—
+undoubtedly the type whose variables you’ll be moving the most in modern C++ programming. As
+explained in Chapter 6, there must never be two unique_ptr<> smart pointers pointing to the same address
+in memory. Otherwise, both would delete (or delete[]) the same raw pointer twice, which is a perfect
+way to initiate a tragic failure of your program. It is thus only fortunate that neither of the two lines that are
+commented out at the end of the following code snippet compiles:
+std::unique_ptr<int> one{ std::make_unique<int>(123) };
+std::unique_ptr<int> other;
+ other = one; /* Error: copy assignment operator is deleted! */
+// std::unique_ptr<int> yet_another{ other }; /* Error: copy constructor is deleted! 
+//What would compile, however, are these two lines :
+//other = std::move(one); // Move assignment operator is defined
+//std::unique_ptr<int> yet_another{ std::move(other) }; // Move constructor is defined
+
+/*
+
+. This is an outline of how
+you’d normally accomplish this:
+namespace std
+{
+ template <typename T>
+ class unique_ptr
+ {
+ ...
+Technically, std::move() is defined in the <utility> module. In practice, though, you’ll rarely have to explicitly import
+this module to use std::move().
+
+ // Prevent copying:
+ unique_ptr(const unique_ptr&) = delete;
+ unique_ptr& operator=(const unique_ptr&) = delete;
+ // Allow moving:
+ unique_ptr(unique_ptr&& source);
+ unique_ptr& operator=(unique_ptr&& rhs);
+ ...
+ };
+}
+
+n As a rule, you should only move an object if you are absolutely sure it is no longer required. Unless
+otherwise specified, you’re not supposed to keep on using an object that was moved. By default, any extended
+use of a moved object results in undefined behavior (read: it’ll often result in crashes)
+
+Make no mistake, std::move() does not move anything. All this function does is turn a given lvalue into an
+rvalue reference. std::move() is effectively nothing more than a type conversion, not at all unlike built-in
+cast operators static_cast<>() and dynamic_cast<>().
+
+For fundamental types and pointers, you can simply use pass-by-value. For objects that are more 
+expensive to copy, you should normally use a const T& parameter. This avoids any lvalue arguments from being 
+copied, and rvalue arguments will bind just fine with a const T& parameter as well. If your function inherently 
+copies its T argument, however, you should pass it by value instead. Lvalue arguments will then be copied when 
+passed to the function, and rvalue arguments will be moved. The latter guideline presumes that the parameter 
+types support move semantics—as all types should these days. In the less likely case that the parameter type 
+lacks proper move members, you should stick with pass-by-reference. More and more types support move 
+semantics these days, though—not in the least all Standard Library types—so pass-by-value is most certainly 
+back on the table!
+
+s. The idea of move operations is that since
+the argument is temporary, the function doesn’t necessarily need to copy data members; it can instead steal
+the data from the object that is the argument. If members of the argument object are pointers, for example,
+the pointers can be transferred without copying what they point to because the argument object will be
+destroyed and so doesn’t need them.
+The important points and best-practice guidelines from this chapter include the following:
+• An rvalue is an expression that typically results in a temporary value; an lvalue is one
+that results in a more persistent value.
+• std::move() can be used to convert an lvalue (such as a named variable) into an
+rvalue. Take care, though. Once moved, an object should normally not be used
+anymore.
+• An rvalue reference type is declared using a double ampersand, &&.
+• The move constructor and move assignment operator have rvalue reference
+parameters, so these will be called when the argument is a temporary (or any other
+rvalue).
+• If a function inherently copies one of its inputs, passing this argument by value is
+preferred, even this if concerns an object of a class type. By doing so, you can cater to
+both lvalue and rvalue inputs with one single function definition.
+• Automatic variables and function parameters should be returned by value and
+without adding std::move() to the return statement.
+• Move members should normally be noexcept; if not, they risk not being invoked by
+Standard Library containers and other templates.
+• The rule of five entails that you either declare all copy members, move members, and
+the destructor together, or none of them at all. The rule of zero urges you to strive to
+define none at all. The means to achieve rule of zero compliance you actually already
+know: always manage dynamic memory and other resources using smart pointers,
+containers, and other RAII techniques
+
+template <typename T>
+void Array<T>::push_back(const T& element)
+{
+...
+ newArray[m_size] = element; // Copy the new element...
+...
+}
+Your first instinct might be to simply slap another std::move() onto element, like so:
+template <typename T>
+void Array<T>::push_back(const T& element)
+{
+...
+ newArray[m_size] = std::move(element); // Move the new element... (???)
+...
+}
+This will not work, though, and with good reason. element is a reference to a const T, meaning that
+the caller of the function expects the argument not to be modified. Moving its contents into another object
+is therefore completely out of the question. This is also why the std::move() type conversion function will
+never cast a const T or const T& type to T&&. Instead, std::move() converts it to the rather pointless type
+const T&&—a reference to a transient value that you’re not allowed to modify. In other words, because the
+type of element is const T&, the type of std::move(element) is const T&&, meaning that assigning the latter
+expression still goes through the copy assignment operator, despite the std::move().
+But of course you still want to cater to those cases where the caller does not need the element argument
+anymore—that is, for those cases where push_back() is called with an rvalue. Luckily, you cannot only use
+rvalue reference parameters for move constructors and move assignment operators; you can use them for
+any function you want. And so you could easily add an extra overload of push_back() that accepts rvalue
+arguments:
+template <typename T>
+void Array<T>::push_back(T&& element)
+{
+...
+ newArray[m_size] = std::move(element); // Move the new element...
+...
+}
+
+■ Caution When passing an argument such as element by rvalue reference, never forget that inside the
+function’s body the expression element is again an lvalue. Remember, any named variable is an lvalue, even if
+the variable itself has an rvalue reference type! In our push_back() example, this means that the std::move()
+in the function’s body is very much required to compel the compiler into choosing T’s move assignment
+operator rather than its copy assignment operator.
+
+Here’s a definition of a pointer that can store the address of functions that have parameters of type long* and
+int and return a value of type long:
+long (*fun_ptr)(long*, int); // Variable fun_ptr (pointer to function that returns long)
+This may look a little weird at first because of all the parentheses. The name of the pointer variable is
+fun_ptr. It doesn’t point to anything because it is not initialized. Ideally, it would be initialized to nullptr
+or with the address of a specific function. The parentheses around the pointer name and the asterisk are
+essential. Without them, this statement would declare a function rather than define a pointer variable
+because the * will bind to the type long:
+long *fun_ptr(long*, int); // Prototype for a function fun_ptr() that returns long*
+
+ Even though the name of a function already evaluates to a value of a function pointer type, you can
+also explicitly take its address using the address-of operator, &. The following statements, in other words, have
+the same effect as the earlier ones:
+auto* fun_ptr = &findMaximum;
+fun_ptr = &findMinimum
+
+Pointer to function is a perfectly reasonable type, which means a function can have a parameter of this
+type as well. The function can then use its pointer to function parameter to call the function to which the
+argument points when the function is called. You can specify just a function name as the argument for a
+parameter that is a “pointer to function” type. A function passed to another function as an argument is
+referred to as a callback function; the function that accepts another function as an argument is a higher-order
+function. Consider the following example:
+// Optimum.cppm - a function template to determine the optimum element in a given vector
+export module optimum;
+import <vector>;
+export template <typename T>
+const T* findOptimum(const std::vector<T>& values, bool (*compare)(const T&, const T&))
+{
+ if (values.empty()) return nullptr;
+
+ const T* optimum = &values[0];
+ for (size_t i {1}; i < values.size(); ++i)
+ {
+ if (compare(values[i], *optimum))
+ optimum = &values[i];
+ }
+ return optimum;
+}
+This higher-order function template generalizes the findMaximum() and findMinimum() functions we
+alluded to earlier. The function pointer you pass to the compare parameter determines which “optimum”
+is computed. The parameter’s type forces you to pass a pointer to a function that takes two T values as
+input and returns a Boolean. This pointed-to function is expected to compare two T values and evaluate
+whether the first one is somehow “better” than the second one. The higher-order findOptimum() function
+then repeatedly calls the given comparison function through its compare parameter and uses the results to
+determine which, out of all the T values in its vector argument, is best or optimal.
+The key point is that you, as the caller of findOptimum(), determine what it means for one T value to be
+better or more optimal than the other. If it’s the minimum element you want you pass a comparison function
+equivalent to the less-than operator; if it’s the maximum element you want the compare callback to behave
+like the greater-than operator; and so on. 
+
+Just like pointers to data values, pointers to functions are low-level language constructs that C++ has inherited
+from the C programming language. And just like raw pointers, function pointers have their limitations, which
+can be overcome using an object-oriented approach. In this section we introduce a similar technique
+where objects are used as a more powerful alternative to plain C-style function pointers. These objects are
+called function objects or functors (the two terms are synonymous). Like a function pointer, a function object
+acts precisely like a function; but unlike a raw function pointer, it is a full-fledged class type object—complete
+with its own member variables and possibly even various other member functions.
+A function object or functor is an object that can be called as if it were a function. The key in constructing one
+is to overload the function call operator
+
+This is where lambda expressions come in. They offer you a convenient, compact syntax to quickly
+define callback functions or functors. And not only is the syntax compact, lambda expressions also allow you
+to define the callback’s logic right there where you want to use it. This is often much better than having to
+define this logic somewhere in the function call operator of some class definition. Lambda expressions thus
+generally lead to particularly expressive yet still very readable code.
+A lambda expression has a lot in common with a function definition. In its most basic form, a lambda
+expression basically provides a way to define a function with no name, an anonymous function. But lambda
+expressions are far more powerful than that. In general, a lambda expression effectively defines a full-blown
+function object that can carry any number of member variables. The beauty is that there’s no need for an
+explicit definition of the type of this object anymore; the compiler generates this type automatically for you.
+Practically speaking, you’ll find that a lambda expression is different from a regular function in that
+it can access variables that exist in the enclosing scope where it is defined. Thinking back to Ex19_04, for
+instance, a lambda expression there would be able to access number_to_search_for, the number that was
+entered by the user. Before we examine how lambda expressions get access to local variables, though, let’s
+first take one step back again and begin by explaining how you can define a basic unnamed or anonymous
+function using a lambda expression.
+
+[] (int x, int y) { return x < y; }
+As you can see, the definition of a lambda expression indeed looks very much like the definition of a
+function. The main difference is that a lambda expression starts with square brackets instead of a return
+type and a function name. The opening square brackets are called the lambda introducer. They mark
+the beginning of the lambda expression. There’s more to the lambda introducer than there is here—the
+brackets are not always empty—but we’ll explain this in more depth a little later. The lambda introducer is
+followed by the lambda parameter list between round parentheses.
+For lambda functions without parameters, you may omit the empty parameter list, (). That is, a lambda
+expression of form []() {...} may be further shortened to [] {...}. An empty lambda initializer, [], must not
+be omitted, though. The lambda initializer is always required to signal the start of a lambda expression.
+The body of the lambda expression between braces follows the parameter list, again just like a normal
+function. The body for this lambda contains just one statement, a return statement that also calculates the
+value that is returned. In general, the body of a lambda can contain any number of statements. The return
+type defaults to that of the value returned. If nothing is returned, the return type is void.
+It’s educational to have at least a basic notion of how lambda expressions are compiled. This will
+aid you later in understanding how more advanced lambda expressions behave. Whenever the compiler
+encounters a lambda expression, it internally generates a new class type. 
+
+Rather than first storing a lambda closure in a named variable, it is at least as common to directly use a
+lambda expression as a callback argument as follows:
+ std::cout << "Minimum element: "
+ << *findOptimum(numbers, [] (int x, int y) { return x < y; }) << std::endl;
+
+As we’ve said before, the lambda introducer, [], is not necessarily empty. It can contain a capture clause
+that specifies how variables in the enclosing scope can be accessed from within the body of the lambda. The
+body of a lambda expression with nothing between the square brackets can work only with the arguments
+and with variables that are defined locally within the lambda. A lambda with no capture clause is called a
+stateless lambda expression because it cannot access anything in its enclosing scope.
+If used in isolation, a capture default clause applies to all variables in the scope enclosing the definition
+of the lambda. There are two capture defaults: = and &. We’ll discuss both of them in turn next. The capture
+clause can contain only one of the capture defaults, never both.
+Capturing by Value
+If you put = between the square brackets, the body of the lambda can access all automatic variables in the
+enclosing scope by value. hat is, while the values of all variables are made available within the lambda 
+expression, the values stored in the original variables cannot be changed. 
+
+If you put & between the square brackets, all variables in the enclosing scope are accessible by reference, so
+their values can be changed by the code in the body of the lambda. To count the number of comparisons
+performed by findOptimum(), for instance, you could use this lambda expression:
+unsigned count {};
+auto counter{ [&](int x, int y) { ++count; return x < y; } };
+findOptimum(numbers, counter);
+All variables within the outer scope are available by reference, so the lambda can both use and alter
+their values.
+
+A pointer to a function stores the address of a function. A pointer to a function can
+store the address of any function with the specified return type and number and
+types of parameters.
+• You can use a pointer to a function to call the function at the address it contains. You
+can also pass a pointer to a function as a function argument.
+• Function objects or functors are objects that behave precisely like a function by
+overloading the function call operator.
+• Any number of member variables or functions can be added to a function object,
+making them far more versatile than plain function pointers.
+• Function objects are powerful but do require quite some coding to set up. This is
+where lambda expressions come in; they alleviate the need to define the class for
+each function object you need.
+• A lambda expression defines either an anonymous function or a function object.
+Lambda expressions are typically used to pass a function as an argument to another
+function.
+• A lambda expression always begins with a lambda introducer that consists of a pair
+of square brackets that can be empty.
+• The lambda introducer can contain a capture clause that specifies which variables
+in the enclosing scope can be accessed from the body of the lambda expression.
+Variables can be captured by value or by reference.
+• There are two default capture clauses: = specifies that all variables in the enclosing
+scope are to be captured by value, and & specifies that all variables in the enclosing
+scope are captured by reference.
+• A capture clause can specify specific variables to be captured by value or by
+reference.
+• Variables captured by value will have a local copy created. The copy is not modifiable
+by default. Adding the mutable keyword following the parameter list allows local
+copies of variables captured by value to be modified.
+• You can specify the return type for a lambda expression using the trailing return type
+syntax. If you don’t specify a return type, the compiler deduces the return type from
+the first return statement in the body of the lambda.
+• You can use the std::function<> template type that is defined in the <functional>
+module to specify the type of a function parameter that will accept any first-class
+function as an argument, including a lambda expression. In fact, it allows you to
+specify a named type for a variable—be it a function parameter, member variable,
+or automatic variable—that can hold a lambda closure. This is a feat that would
+otherwise be very hard, as only the compiler knows the name of this type.
+
+
+
 
 
 */
