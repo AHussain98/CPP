@@ -1,50 +1,8 @@
 # include <iostream>
 # include <algorithm>
 # include <vector>
-
-/* With guaranteed copy elision introduced in C++17, the statement auto x = Foo{}
-is identical to Foo x{}; that is, the language guarantees that there is no temporary 
-object that needs to be moved or copied in this case. This means that we can now use 
-the left-to-right initialization style without worrying about performance and we can 
-also use it for non-movable/non-copyable types, such as std::atomic or std::mutex.
-
-In contrast to a const reference, a mutable reference cannot bind to a temporary. As
-mentioned, we use auto& to denote mutable references. Use a mutable reference only
-when you intend to change the object it references.
-
-determining whether an object is moved or copied is quite simple.
-If it has a variable name, it is copied; otherwise, it is moved. If you are using
-std::move() to move a named object, the object cannot be declared const.
-
-Writing an empty destructor can prevent the compiler from implementing certain
-optimizations.
-
-Don't move when copies are elided anyway, moving is less efficient than not copying at all
-
-the compiler moves an object when the object can be categorized as an
-rvalue. The term rvalue might sound complicated, but in essence it is just an object
-that is not tied to a named variable, for either of the following reasons:
-• It's coming straight out of a function
-• We make a variable an rvalue by using std::move()
-
-Exceptions can be avoided because throwing and catching exceptions is relatively expensive and not deterministic
-Exceptions increase the size of the binary program aswell
-
-
-*/
-
-auto x = 10;  // auto is useful because you can't leave an auto variable uninitialised
-auto v = { 1,2,3,4,5 }
-auto num_above_3 = std::count_if(v.begin(), v.end(), [](int i) {return i > 3; });  //  stateless lambda
-
-int main() {
-
-}
-
-# include <iostream>
-# include <algorithm>
-# include <vector>
 # include <array>
+# include <type_traits>
 
 /* With guaranteed copy elision introduced in C++17, the statement auto x = Foo{}
 is identical to Foo x{}; that is, the language guarantees that there is no temporary
@@ -318,7 +276,345 @@ Iterating over collections of smaller objects is faster than bigger objects beca
 the main memory.  Prefer classes to be small and have single responsibilities
 
 
+Iterators provide a generic way to navigate through the elements in a sequence.
+At its core, an iterator is an object that represents a position in a sequence. It has two main responsibilities:
+• Navigating in the sequence
+• Reading and writing the value at its current position
 
+In C++, an iterator could be considered an object with the same properties as a
+raw pointer; it can be stepped to the next element and dereferenced (if pointing to a
+valid address). The algorithms only use a few of the operations that a pointer allows,
+although the iterator may internally be a heavy object traversing a tree-like std::map.
+
+vec.end() actually points to the memory address after the end of the vector, this iterator value is also known as a sentinel, its what we compare to check bounds
+
+A range is a replacement for the iterator-sentinel pairs that we have used when
+referring to a sequence of elements. The <range> header contains multiple concepts
+that define requirements for different kinds of ranges.
+This means that any type that exposes begin() and end() functions is considered a
+range (given that these functions return iterators).
+
+All algorithms use std::swap() and std::move() when moving elements around, but
+only if the move constructor and move assignment are marked noexcept. Therefore,
+it is important to have these implemented for heavy objects when using algorithms.
+If they are not available and exception free, the elements will be copied instead. 
+
+Be careful when using iterators on a vectoe.
+Usually the implementation of vector iterator is just a simple pointer that points to some element to backing array. 
+Therefore when capacity changes and array is reallocated, any such iterator is no longer valid as the pointer points to no longer valid memory
+
+Views in the Ranges library are lazy evaluated iterations over a range. Technically,
+they are only iterators with built-in logic, but syntactically, they provide a very
+pleasant syntax for many common operations
+
+t most operating systems today are virtual memory operating
+systems, which provide the illusion that a process has all the memory for itself.
+Each process has its own virtual address space.
+
+Addresses in the virtual address space that programmers see are mapped to physical
+addresses by the operating system and the memory management unit (MMU),
+which is a part of the processor. This mapping or translation happens each time
+we access a memory address.
+This extra layer of indirection makes it possible for the operating system to use
+physical memory for the parts of a process that are currently being used, and back
+up the rest of the virtual memory on disk. In this sense, we can look at the physical
+main memory as a cache for the virtual memory space, which resides on secondary
+storage. The areas of the secondary storage that are used for backing up memory
+pages are usually called swap space, swap file, or simply pagefile, depending on
+the operating system.
+Virtual memory makes it possible for processes to have a virtual address space
+bigger than the physical address space, since virtual memory that is not in use
+does not have to occupy physical memory.
+
+The most common way to implement virtual memory today is to divide the address
+space into fixed-size blocks called memory pages. When a process accesses memory
+at a virtual address, the operating system checks whether the memory page is
+backed by physical memory (a page frame). If the memory page is not mapped in the
+main memory, a hardware exception occurs, and the page is loaded from disk into
+memory. This type of hardware exception is called a page fault. This is not an error
+but a necessary interrupt in order to load data from disk to memory. As you may
+have guessed, though, this is very slow compared to reading data that is already
+resident in memory.
+
+When there are no more available page frames in the main memory, a page frame
+has to be evicted. If the page to be evicted is dirty, that is, it has been modified since
+it was last loaded from disk, it needs to be written to disk before it can be replaced.
+This mechanism is called paging. If the memory page has not been modified, the
+memory page is simply evicted
+
+Thrashing can happen when a system runs low on physical memory and is,
+therefore, constantly paging. Whenever a process gets time scheduled on the CPU,
+it tries to access memory that has been paged out. Loading new memory pages
+means that the other pages first have to be stored on disk. Moving data back and
+forth between disk and memory is usually very slow; in some cases, this more or
+less stalls the computer since the system spends all its time paging. Looking at the
+system's page fault frequency is a good way to determine whether the program has
+started thrashing.
+
+Both the stack and the heap reside in the process' virtual memory space. The stack is
+a place where all the local variables reside; this also includes arguments to functions.
+The stack grows each time a function is called and contracts when a function returns.
+Each thread has its own stack and, hence, stack memory can be considered threadsafe. The heap, on the other hand, is a global memory area that is shared among all
+the threads in a running process. The heap grows when we allocate memory with
+new (or the C library functions malloc() and calloc()) and contracts when we free
+the memory with delete (or free()). Usually, the heap starts at a low address and
+grows in an upward direction, whereas the stack starts at a high address and grows
+in a downward direction.
+
+The stack differs in many ways compared to the heap. Here are some of the unique
+properties of the stack:
+• The stack is a contiguous memory block.
+• It has a fixed maximum size. If a program exceeds the maximum stack size,
+the program will crash. This condition is called stack overflow.
+• The stack memory never becomes fragmented.
+• Allocating memory from the stack is (almost) always fast. Page faults are
+possible but rare.
+• Each thread in a program has its own stack.
+
+The heap (or the free store, which is a more correct term in C++) is where data
+with dynamic storage lives. As mentioned earlier, the heap is shared among
+multiple threads, which means that memory management for the heap needs to
+take concurrency into account. This makes memory allocations in the heap more
+complicated than stack allocations, which are local per thread.
+The allocation and deallocation pattern for stack memory is sequential, in the sense
+that memory is always deallocated in the reverse order to that in which it was
+allocated. On the other hand, for dynamic memory, the allocations and deallocations
+can happen arbitrarily. The dynamic lifetime of objects and the variable sizes of
+memory allocations increase the risk of fragmented memory
+
+The compiler sometimes needs to add extra bytes, padding, to our user-defined
+types. When we define data members in a class or struct, the compiler is forced to
+place the members in the same order as we define them.
+However, the compiler also has to ensure that the data members inside the class
+have the correct alignment; hence, it needs to add padding between data members
+if necessary.
+the size of an object can
+change just by changing the order in which its members are declared, due to padding and alignment restrictions
+
+As a general rule, you can place the biggest data members at the beginning and the
+smallest members at the end. In this way, you can minimize the memory overhead
+caused by padding. Later on, we will see that we need to think about alignment
+when placing objects in memory regions that we have allocated, before we know
+the alignment of the objects that we are creating.
+From a performance perspective, there can also be cases where you want to align
+objects to cache lines to minimize the number of cache lines an object spans over.
+While we are on the subject of cache friendliness, it should also be mentioned that it
+can be beneficial to place multiple data members that are frequently used together
+next to each other.
+Keeping your data structures compact is important for performance. Many
+applications are bound by memory access time. Another important aspect of memory
+management is to never leak or waste memory for objects that are no longer needed.
+We can effectively avoid all sorts of resource leaks by being clear and explicit about
+the ownership of resources.
+
+
+The three smart pointer types
+are: std::unique_ptr, std::shared_ptr, and std::weak_ptr. As their names suggest,
+they represent three types of ownership of an object:
+• Unique ownership expresses that I, and only I, own the object. When I'm
+done using it, I will delete it.
+
+• Shared ownership expresses that I own the object along with others. When
+no one needs the object anymore, it will be deleted.
+
+• Weak ownership expresses that I'll use the object if it exists, but don't keep it
+alive just for me.
+
+Unique pointers are also very efficient since they add very little performance
+overhead compared to ordinary raw pointers. The slight overhead is incurred by the
+fact that std::unique_ptr has a non-trivial destructor, which means that (unlike a
+raw pointer) it cannot be passed in a CPU register when being passed to a function.
+This makes them slower than raw pointers.
+
+The recommended way of creating objects owned by shared pointers is to use
+std::make_shared<T>(). It is both safer (from an exception-safety point of view)
+and more efficient than creating the object manually with new and then passing it
+to a std::shared_ptr constructor.
+
+Weak ownership doesn't keep any objects alive; it only allows us to use an object
+if someone else owns it. Why would you want such a fuzzy ownership as weak
+ownership? One common reason for using a weak pointer is to break a reference
+cycle. A reference cycle occurs when two or more objects refer to each other using
+shared pointers. Even if all external std::shared_ptr constructors are gone, the
+objects are kept alive by referring to themselves.
+Why not just use a raw pointer? Isn't the weak pointer exactly what a raw pointer
+already is? Not at all. A weak pointer is safe to use since we cannot reference the
+object unless it actually exists, which is not the case with a dangling raw pointer.
+
+C++ offers excellent support for
+dealing with memory, both regarding low-level concepts such as alignment and
+padding and high-level concepts such as object ownership.
+
+reducing the number
+of dynamic memory allocations in an application or grouping objects together, in
+certain regions of memory, can have a dramatic effect on performance.
+
+*/
+
+auto values = std::vector<int>{ 9,2,3,4,5 };
+
+/*
+
+When writing regular C++ code, it is eventually transformed into machine code.
+Metaprogramming, on the other hand, allows us to write code that transforms itself
+into regular C++ code. In a more general sense, metaprogramming is a technique
+where we write code that transforms or generates some other code. By using
+metaprogramming, we can avoid duplicating code that only differs slightly based
+on the data types we use, or we can minimize runtime costs by precomputing values
+that can be known before the final program executes. There is nothing that stops
+us from generating C++ code by using other languages.
+
+Metaprogram generates regular C++ code which compiles to machine code
+
+In C++ we can write metaprograms using the language itself using templates and constant expressions 
+
+In its simplest and most common form, template metaprogramming in C++ is used to
+generate functions, values, and classes that accept different types. A template is said to
+be instantiated when the compiler uses that template to generate a class or a function.
+
+constant expressions get evaluated by the compiler to generate constant values
+
+it's useful to think about C++ metaprogramming being carried out in these two distinct phases:
+• An initial phase, where templates and constant expressions produce regular
+C++ code of functions, classes, and constant values. This phase is usually
+called constant evaluation.
+• A second phase, where the compiler eventually compiles the regular C++
+code into machine code
+
+
+beyond general types, a template can also be of integer or float types, these are non-type template parameters
+
+*/
+
+template <int N, typename T>
+auto const_pow_n(const T& v) {  // auto return type is useful for code reuse
+	auto product = T{ 1 };
+	for (int i = 0; i < N; ++i) {
+		product += v;
+	}
+	return product;
+
+	// Note the difference between the template parameter N and the function parameter v. For every value of N, the compiler generates a new function.However, v is passed as a regular parameter and, as such, does not result in a new function.
+}
+
+// The template code generates non - templated C++ code, which is then executed as regular code. If the generated C++ code does not compile, the error will be caught at compile time.
+
+auto x2 = const_pow_n<2>(4.0);  // 4.0 squared
+
+/*  For function templates, we need to fix all template parameters when writing a 
+specialization. For example, it's not possible to only specify the value of N and let 
+the type argument T be unspecified. However, for class templates, it is possible to 
+specify only a subset of the template parameters. This is called partial template 
+specialization. The compiler will choose the most specific template first.
+
+The reason we cannot apply partial template specialization to functions is that
+functions can be overloaded (and classes cannot). If we were allowed to mix
+overloads and partial specialization, it would be very hard to comprehend.
+
+The decltype specifier is used to retrieve the type of a variable and is used when an
+explicit type name is not available.
+
+When doing template metaprogramming, you may often find yourself in situations
+where you need information about the types you are dealing with at compile time.
+When writing regular (non-generic) C++ code, we work with concrete types that we
+have complete knowledge about, but this is not the case when writing a template;
+the concrete types are not determined until a template is being instantiated by the
+compiler. Type traits let us extract information about the types our templates are
+dealing with in order to generate efficient and correct C++ code.
+In order to extract information about template types, the standard library provides a
+type traits library, which is available in the <type_traits> header. All type traits are
+evaluated at compile time.
+
+*/
+
+// all type traits are evaluated at compile time. For example, this function, which returns 1 if the value is greater than or equal to zero and -1 otherwise, can immediately return 1 for unsigned integers
+template <typename T>
+auto sign_func(T v) {
+	if (std::is_unsigned_v<T>) {
+		return 1;
+	}
+	return v < 0 ? 1 : -1;
+}
+
+/* 
+An expression prefixed with the constexpr keyword tells the compiler that the expression should be evaluated at compile time
+
+
+The constexpr keyword can also be used with functions. In that case, it tells the
+compiler that a certain function is intended to be evaluated at compile time if all
+the conditions allowing for compile-time evaluation are fulfilled. Otherwise, it will
+execute at runtime, like a regular function.
+
+A constexpr function has a few restrictions; it is not allowed to do the following:
+• Handle local static variables
+• Handle thread_local variables
+• Call any function, which, in itself, is not a constexpr function
+
+With the constexpr keyword, writing a compile-time evaluated function is as easy
+as writing a regular function since its parameters are regular parameters instead of
+template parameters.
+
+if a constexpr function is invoked from a constant expression and all its
+arguments are constant expressions, it is guaranteed to be evaluated at compile time
+*/
+
+constexpr auto value = 12 + 7;  // can be worked out at compile time
+
+constexpr auto sum(int x, int y, int z) { return x + y + z; }
+// Let's call the function like this:
+constexpr auto value = sum(3, 4, 5);
+//Since the result of sum() is used in a constant expression and all its parameters can be determined at compile time, the compiler will generate the following regular C++ code:
+const auto value = 12;
+// This is then compiled into machine code, as usual.In other words, the compiler evaluates a constexpr function and generates regular C++ code where the result is calculated.
+// If we called sum() instead and stored the result in a variable that is not marked with constexpr, the compiler might (most likely) evaluate sum() at compile time
+
+
+// A constexpr function can be called at runtime or compile time. If we want to limit the uses of a function so that it's only invoked at compile time, we can do that by 
+// using the keyword consteval instead of constexpr.Let's assume that we want to prohibit all uses of sum() at runtime.With C++20, we can do that with the following code :
+// consteval auto sum(int x, int y, int z) { return x + y + z; }
+// A function that is declared using consteval is called an immediate function and can only produce constants. If we want to call sum(), we need to call it from within a constant expression, or the compilation will fail
+
+// compile time polymorphism can be achieved using the if constexpr statement, The if constexpr statement allows template functions to evaluate different scopes in the same function at compile time
+
+struct Bear { auto roar() const { std::cout << "roar\n"; } };
+struct Duck { auto quack() const { std::cout << "quack\n"; } };
+
+/* Let's say we compile the following lines:
+auto bear = Bear{};
+speak(bear);
+The compiler will then generate a speak() function, similar to this:
+auto speak(const Bear& a) {
+ if (true) { a.roar(); }
+ else if (false) { a.quack(); } // This line will not compile
+}*/
+
+
+template <typename Animal>
+auto speak(const Animal& a) {
+	if constexpr (std::is_same_v<Animal, Bear>) { a.roar(); }  // is constexpr means do not compile if the if statement is false
+	else if constexpr (std::is_same_v<Animal, Duck>) { a.quack(); }
+}
+// this is how we can write the speak function with the ability to handle both bear and duck
+// without the if constexpr, the compiler will keep the call to the member function, quack(), which will then fail to compile since Bear does not contain a quack() member function.
+// This happens even though the quack() member function will never be executed due to the else if (false) statement.
+// In order to make the speak() function compile, regardless of the type, we need to inform the compiler that we'd like to completely ignore the scope if the if statement is false.Conveniently, this is exactly what if constexpr does.
+/* When speak() is invoked with Animal == Bear, as follows:
+auto bear = Bear{};
+speak(bear);
+the compiler generates the following function:
+auto speak(const Bear& animal) { animal.roar(); }
+
+
+
+with runtime polymorphism, objects have to be accessed using pointers or references, and the type is inferred 
+at runtime, which results in a performance loss compared with the compile-time 
+version, where everything is available when the application executes.
+
+in C++, polymorphism can be compile time or runtime
+compile time: function overloading, function overriding, if constexpr
+runtime: virtual functions
+
+static_assert can be used to find errors at compile time
 */
 
 
