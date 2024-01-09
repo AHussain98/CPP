@@ -176,6 +176,32 @@ struct collection<T*, S>
 // collection<char, 10> c;  // partial specialization <T, 10>
 // collection<int*, 20> d;  // partial specialization <T*, S>
 
+// chapter 3: Variadic Templates
+// template with a varible number of arguments
+// Variadic function templates are template functions with a variable number of arguments. 
+// They borrow the use of the ellipsis(...) for specifying a pack of arguments, which can have different syntax depending on its nature.
+
+// A template or function parameter pack can accept zero, one, or more arguments.The
+// standard does not specify any upper limit for the number of arguments, but in practice,
+// compilers may have some.What the standard does is recommend minimum values for
+// these limits but it does not require any compliance on them.These limits are as follows :
+// • For a function parameter pack, the maximum number of arguments depends on the
+// limit of arguments for a function call, which is recommended to be at least 256.
+// • For a template parameter pack, the maximum number of arguments depends on the
+// limit of template parameters, which is recommended to be at least 1, 024.
+
+template <typename T, typename... Args>
+T sum(T a, Args... args) {
+	if constexpr (sizeof...(args) == 0) {
+		return a;
+	}
+	else return a + sum(args...)
+}
+/* Notice that sizeof…(args) (the function parameter pack) and sizeof…(Args) (the 
+template parameter pack) return the same value. On the other hand, sizeof…(args)
+and sizeof(args)... are not the same thing. The former is the sizeof operator 
+used on the parameter pack args. The latter is an expansion of the parameter pack args
+on the sizeof operator. */
 
 
 int main() {
