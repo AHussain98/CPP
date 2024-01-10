@@ -203,6 +203,184 @@ and sizeof(args)... are not the same thing. The former is the sizeof operator
 used on the parameter pack args. The latter is an expansion of the parameter pack args
 on the sizeof operator. */
 
+// chapter 3: Variadic Templates
+// template with a varible number of arguments
+// Variadic function templates are template functions with a variable number of arguments. 
+// They borrow the use of the ellipsis(...) for specifying a pack of arguments, which can have different syntax depending on its nature.
+
+// A template or function parameter pack can accept zero, one, or more arguments.The
+// standard does not specify any upper limit for the number of arguments, but in practice,
+// compilers may have some.What the standard does is recommend minimum values for
+// these limits but it does not require any compliance on them.These limits are as follows :
+// • For a function parameter pack, the maximum number of arguments depends on the
+// limit of arguments for a function call, which is recommended to be at least 256.
+// • For a template parameter pack, the maximum number of arguments depends on the
+// limit of template parameters, which is recommended to be at least 1, 024.
+
+template <typename T, typename... Args>
+T sum(T a, Args... args) {
+	if constexpr (sizeof...(args) == 0) {
+		return a;
+	}
+	else return a + sum(args...)
+}
+/* Notice that sizeof…(args) (the function parameter pack) and sizeof…(Args) (the 
+template parameter pack) return the same value. On the other hand, sizeof…(args)
+and sizeof(args)... are not the same thing. The former is the sizeof operator 
+used on the parameter pack args. The latter is an expansion of the parameter pack args
+on the sizeof operator.
+
+The term name binding refers to the process of finding the declaration of each name
+that is used within a template. There are two kinds of names used within a template:
+dependent names and non-dependent names. The former are names that depend
+on the type or value of a template parameter that can be a type, non-type, or template
+parameter. Names that don’t depend on template parameters are called non-dependent.
+
+name lookup happens differently
+for dependent names (those that depend on a template parameter) and non-dependent
+names (those that do not depend on a template parameter, plus the template name and
+names defined in the current template instantiation). When the compiler passes through
+the definition of a template it needs to figure out whether a name is dependent or
+non-dependent. Further name lookup depends on this categorization and happens either
+at the template definition point (for non-dependent names) or the template instantiation
+point (for dependent names). Therefore, instantiation of a template happens in two phases:
+• The first phase occurs at the point of the definition when the template syntax is
+checked and names are categorized as dependent or non-dependent.
+• The second phase occurs at the point of instantiation when the template arguments
+are substituted for the template parameters. Name binding for dependent names
+happens at this point.
+
+The std::declval is a utility type operation function, available in the <utility>
+header. It’s in the same category as functions such as std::move and std::forward
+that we have already seen. What it does is very simple: it adds an rvalue reference to its
+type template argument.
+
+ in templates, rvalue references work slightly differently, and sometimes they are
+rvalue references, but other times they are actually lvalue references.
+References that exhibit this behavior are called forwarding references. However, they are
+often referred to as universal references. This was a term coined by Scott Meyers shortly
+after C++11 when there was no term in the standard for this type of reference. In order to
+address this shortcoming, and because it didn’t feel the term universal references properly
+described their semantics, the C++ standard committee called these forwarding references
+in C++14
+
+
+Name binding is the process of finding the declaration for each name that is explicitly or implicitly used in a template. The compiler might bind a name in the definition of a template, or it might bind a name at the instantiation of a template.
+a dependent name is a name that depends on the type or the value of a template parameter
+*/
+
+template <class T> 
+class U : A<T> {
+	typename T::B x;
+	void f(A<T>& y) {
+		*y++;
+	}
+};
+
+// dependent names above are base class A<T>, typename T::B and variable y
+
+// the compiler binds dependent names what a template is instantiated
+// the compiler binds non-dependent names when a template is defined
+
+void f(double) { cout << "Function f(double)" << endl; }
+
+template <class A> struct container { // point of definition of container
+	void member1() {
+		// This call is not template dependent, 
+		// because it does not make any use of a template parameter.
+		// The name is resolved at the point of definition, so f(int) is not visible.
+		f(1);
+	}
+	void member2(A arg);
+};
+
+void f(int) { cout << "Function f(int)" << endl; }
+
+void h(double) { cout << "Function h(double)" << endl; }
+
+template <class A> 
+void container<A>::member2(A arg) {
+	// This call is template dependent, so qualified name lookup only finds
+	// names visible at the point of instantiation.
+	::h(arg);
+}
+
+template 
+struct container<int>; // point of instantiation of container<int>
+
+void h(int) { cout << "Function h(int)" << endl; }
+
+int main(void) {
+	container<int> test;
+	test.member1();
+	test.member2(10);
+	return 0;
+}
+/* The point of definition of a template is located immediately before its definition. 
+In this example, the point of definition of the template container is located immediately before the keyword template. 
+Because the function call f(1) does not depend on a template parameter, the compiler considers names declared before the definition of the template container. 
+Therefore, the function call f(1) calls f(double). 
+Although f(int) is a better match, it is not in scope at the point of definition of container.
+
+The point of instantiation of a template is located immediately before the declaration that encloses its use. 
+In this example, the point of instantiation of container<int> is the location of the explicit instantiation. 
+Because the qualified function call ::h(arg) depends on the template argument arg, the compiler considers names declared before the instantiation of container<int>. 
+Therefore, the function call h(arg) calls h(double). It does not consider h(int), because this function is not in scope at the point of instantiation of container<int>.
+
+Point of instantiation binding implies the following:
+A template parameter cannot depend on any local name or class member.
+An unqualified name in a template cannot depend on a local name or class member.*/
+
+/*
+reference collapsing rule. The rule is very simple. & always wins. So & & is &, and so are && & and & &&. The only case where && emerges from collapsing is && &&. 
+You can think of it as a logical-OR, with & being 1 and && being 0.
+
+given a function template like:
+*/
+template <class T>
+void func(T&& t){}
+
+/*  Don't let T&& fool you here - t is not an rvalue reference. 
+When it appears in a type-deducing context, T&& acquires a special meaning. 
+When func is instantiated, T depends on whether the argument passed to func is an lvalue or an rvalue. 
+If it's an lvalue of type U, T is deduced to U&. If it's an rvalue, T is deduced to U  */
+
+func(4);            // 4 is an rvalue: T deduced to int
+
+double d = 3.14;
+func(d);            // d is an lvalue; T deduced to double&
+
+float f() { ... }
+func(f());          // f() is an rvalue; T deduced to float
+
+int bar(int i) {
+	func(i);          // i is an lvalue; T deduced to int&
+}
+
+/*
+In C++, perfect forwarding is the act of passing a function’s parameters to another function while preserving its reference category. 
+It is commonly used by wrapper methods that want to pass their parameters through to another function, often a constructor.
+
+In perfect forwarding, std::forward is used to convert the named rvalue reference t1 and t2 to unnamed rvalue reference.
+
+*/
+template <typename T1, typename T2> 
+void outer(T1&& t1, T2&& t2)  // if T1 is a lvalue reference, it gets forwarded as an lvalue reference, same as if its const or templated
+{ // ordinarily, it would be passed as an lvalue reference to T1 if t1 was an rvalue, but std::forward is ensuring its sent on as an rvalue
+	inner(std::forward<T1>(t1), std::forward<T2>(t2));
+}
+
+// If you use a named rvalue reference in an expression it is actually an lvalue(because you refer to the object by name).Consider the following example :
+
+void inner(int&, int&);  // #1
+void inner(int&&, int&&); // #2
+// Now, if we call outer like this
+outer(17, 29);
+// we would like 17 and 29 to be forwarded to #2 because 17 and 29 are integer literals and as such rvalues.
+// But since t1 and t2 in the expression inner(t1, t2); are lvalues, you'd be invoking #1 instead of #2. 
+// That's why we need to turn the references back into unnamed references with std::forward.So, t1 in outer is always an lvalue expression while forward<T1>(t1) may be an rvalue expression depending on T1.
+// The latter is only an lvalue expression if T1 is an lvalue reference.And T1 is only deduced to be an lvalue reference in case the first argument to outer was an lvalue expression.
+
 
 int main() {
 	std::cout << add<float>(2.9, 3.6) << std::endl;  // If the type of the two parameters is ambiguous, the compiler will not be able to deduce them automatically. These are both floats so <float> can be removed
