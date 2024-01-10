@@ -483,6 +483,20 @@ template instantiation happens at point[6], handler<int>::handle is the name
 that is bound to the dependent name used at[3].Running this program will print
 handler<int> : 42 to the console.  */
 
+he key takeaway from the previous section is that name lookup happens differently 
+for dependent names (those that depend on a template parameter) and non-dependent 
+names (those that do not depend on a template parameter, plus the template name and 
+names defined in the current template instantiation). When the compiler passes through 
+the definition of a template it needs to figure out whether a name is dependent or 
+non-dependent. Further name lookup depends on this categorization and happens either 
+at the template definition point (for non-dependent names) or the template instantiation 
+point (for dependent names). Therefore, instantiation of a template happens in two phases:
+• The first phase occurs at the point of the definition when the template syntax is 
+checked and names are categorized as dependent or non-dependent.
+• The second phase occurs at the point of instantiation when the template arguments 
+are substituted for the template parameters. Name binding for dependent names 
+happens at this point.
+This process in two steps is called two-phase name lookup. 
 
 int main() {
 	std::cout << add<float>(2.9, 3.6) << std::endl;  // If the type of the two parameters is ambiguous, the compiler will not be able to deduce them automatically. These are both floats so <float> can be removed
