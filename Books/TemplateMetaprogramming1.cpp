@@ -381,6 +381,108 @@ outer(17, 29);
 // That's why we need to turn the references back into unnamed references with std::forward.So, t1 in outer is always an lvalue expression while forward<T1>(t1) may be an rvalue expression depending on T1.
 // The latter is only an lvalue expression if T1 is an lvalue reference.And T1 is only deduced to be an lvalue reference in case the first argument to outer was an lvalue expression.
 
+/* Understanding name bindingand dependent names
+The term name binding refers to the process of finding the declaration of each name
+that is used within a template.There are two kinds of names used within a template:
+dependent namesand non - dependent names.The former are names that depend
+on the type or value of a template parameter that can be a type, non - type, or template
+parameter.Names that don’t depend on template parameters are called non - dependent.
+The name lookup is performed differently for dependentand non - dependent names :
+• For dependent names, it is performed at the point of template instantiation.
+• For non - dependent names, it is performed at the point of the template definition.
+We will first look at non - dependent names.As previously mentioned, name lookup
+happens at the point of the template definition.This is located immediately before the
+template definition.To understand how this works, let’s consider the following example : */
+template <typename T>
+struct processor;          // [1] template declaration
+void handle(double value)  // [2] handle(double) definition
+{
+	std::cout << "processing a double: " << value << '\n';
+}
+template <typename T>
+struct parser              // [3] template definition
+{
+	void parse()
+	{
+		handle(42);          // [4] non-dependent name
+	}
+};
+void handle(int value)     // [5] handle(int) definition
+{
+	std::cout << "processing an int: " << value << '\n';
+}
+int main()
+{
+	parser<int> p;          // [6] template instantiation
+	p.parse();
+}
+
+/* There are several points of reference that are marked in the comments on the right side.
+At point[1], we have the declaration of a class template called parser.This is followed
+at point[2] by the definition of a function called handle that takes a double as its
+argument.The definition of the class template follows at point[3].This class contains
+a single method called run that invokes a function called handle with the value 42 as its
+argument, at point[4].
+The name handle is a non - dependent name because it does not depend on any template
+parameter.Therefore, name lookupand binding are performed at this point.handle
+must be a function known at point[3] and the function defined at[2] is the only
+match.After the class template definition, at point[5] we have the definition of an
+overload for the function handle, which takes an integer as its argument.This is a better
+match for handle(42), but it comes after the name binding has been performed, and
+therefore it will be ignored.In the main function, at point[6], we have an instantiation
+of the parser class template for the type int.Upon calling the run function, the text
+processing a double : 42 will be printed to the console output.
+The next example is designed to introduce you to the concept of dependent names.
+Let’s look at the code first :  */
+template <typename T>
+struct handler          // [1] template definition
+{
+	void handle(T value)
+	{
+		std::cout << "handler<T>: " << value << '\n';
+	}
+};
+template <typename T>
+struct parser           // [2] template definition
+{
+	void parse(T arg)
+	{
+		arg.handle(42);   // [3] dependent name
+		124 Advanced Template Concepts
+	}
+};
+template <>
+struct handler<int>     // [4] template specialization
+{
+	void handle(int value)
+	{
+		std::cout << "handler<int>: " << value << '\n';
+	}
+};
+int main()
+{
+	handler<int> h;         // [5] template instantiation
+	parser<handler<int>> p; // [6] template instantiation
+	p.parse(h);
+}
+
+/*This example is slightly different from the previous one.The parser class template
+is very similar, but the handle functions have become members of another class
+template.Let’s analyze it point by point.
+At the point mark with[1] in the comments, we have the definition of a class template
+called handler.This contains a single, public method called handle that takes an
+argument of the T typeand prints its value to the console.Next, at point[2], we
+have the definition of the class template called parser.This is similar to the previous
+one, except for one key aspect : at point[3], it invokes a method called handle on
+its argument.Because the type of the argument is the template parameter T, it makes
+handle a dependent name.Dependent names are looked up at the point of template
+instantiation, so handle is not bound at this point.Continuing with the code, at point
+[4], there is a template specialization for the handler class template for the type int.
+As a specialization, this is a better match for the dependent name.Therefore, when the
+template instantiation happens at point[6], handler<int>::handle is the name
+that is bound to the dependent name used at[3].Running this program will print
+handler<int> : 42 to the console.  */
+
 
 int main() {
 	std::cout << add<float>(2.9, 3.6) << std::endl;  // If the type of the two parameters is ambiguous, the compiler will not be able to deduce them automatically. These are both floats so <float> can be removed
