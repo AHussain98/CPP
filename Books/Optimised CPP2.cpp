@@ -618,6 +618,77 @@ static_assert can be used to find errors at compile time
 */
 
 
+/* Optimisation tips:
+
+Consider Implementing Temporal Locality and Spatial Locality Optimizations
+Program code and data have temporal and spatial locality. This means that, over short periods of time, there is a good chance that the same code or data gets reused:
+- Temporal locality refers to the reuse of specific data, and/or resources, within a relatively small-time duration.
+- Spatial locality refers to the use of data elements within relatively close storage locations.
+
+Understand Memory Hierarchy (L1, L2, L3) and Their Speed Of Access
+- CPU registers (8-256 registers) – immediate access, with the speed of the innermost core of the processor
+- L1 CPU caches (32 KiB to 512 KiB; ~4 cycles) – fast access, with the speed of the innermost memory bus owned exclusively by each core
+- L2 CPU caches (128 KiB to 24 MiB; ~10 cycles) – slightly slower access, with the speed of the memory bus shared between twins of cores
+- L3 CPU caches (2 MiB to 32 MiB; ~40 – 75 cycles) – even slower access, with the speed of the memory bus shared between even more cores of the same processor
+- Main physical memory (RAM) (256 MiB to 64 GiB) – slow access, the speed of which is limited by the spatial distances and general hardware interfaces between the processor and the memory modules on the motherboard
+- Disk (virtual memory, file system) (1 GiB to 256 TiB, ~250 ms) – very slow
+- Remote Memory (such as other computers or the Internet)
+
+Use Cache-Friendly Data Structures:
+1. Data structures that are contained within a single cache-line are more efficient.
+2. Use appropriate containers (e.g. prefer reserved std::vector than std::list).
+3. Organize your data to avoid alignment holes (sorting your struct members by decreasing size is one way).
+4. Don’t neglect the cache in data structure and algorithm design.
+5. Use smaller data types
+6. Beware of the standard dynamic memory allocator, which may introduce holes and spread your data around in memory as it warms up.
+7. Make sure all adjacent data is actually used in the hot loops. Otherwise, consider breaking up data structures into hot and cold components, so that the hot loops use hot data.
+8. Avoid algorithms and data structures that exhibit irregular access patterns, and favor linear data structures.
+9. Know and exploit the implicit structure of data.
+
+10. Write Cache-Friendly Code
+10.1. Place related data close in memory to allow efficient caching – the principle of locality
+10.2. Understand how cache lines work
+10.3. Use appropriate data structures
+10.4. Avoid unpredictable branches
+10.5. Avoid virtual functions
+10.6. Avoid false sharing problem
+10.7. When a context switch happens the processor involved is likely to lose the data in its caches
+10.8. Try to have a regular access pattern that will let the hardware prefetcher work efficiently
+10.9. Start addressing what is called temporal locality
+10.10. Merge loops that touch the same data (loop fusion), and employ rewriting techniques known as tiling or blocking
+** Following those rules will minimize the number of page faults (caused by thrashing) – latency killer.
+
+01. Make the common case fast and the rare case correct.
+02. Code for correctness first, then optimize!
+03. Optimize - People I know who write very efficient code say they spend at least twice as long optimizing code as they spend writing code.
+04. Jumps/branches are expensive. Minimize their use whenever possible.
+05. Think about the order of array indices.
+06. Think about instruction-level-parallelism.
+07. Avoid/reduce the number of local variables.
+08. Reduce the number of function parameters.
+09. Pass structures by reference, not by value.
+10. If you do not need a return value from a function, do not define one.
+11. Try to avoid casting where possible.
+12. Be very careful when declaring C++ object variables.
+13. Make default class constructors as lightweight as possible.
+14. Use shift operations >> and << instead of integer multiplication and division, where possible.
+15. Be careful using table-lookup functions.
+16. For most classes, use the operators += , -= , *= , and /= , instead of the operators + , - , * , and / .
+17. For basic data types, use the operators + , - , * , and / instead of the operators += , -= , *= , and /= .
+18. Delay declaring local variables.
+19. For objects, use the prefix operator (++obj) instead of the postfix operator (obj++).
+20. Be careful using templates.
+21. Avoid dynamic memory allocation during computation.
+22. Find and utilize information about your system’s memory cache.
+23. Avoid unnecessary data initialization.
+24. Try to early loop termination and early function returns.
+25. Simplify your equations on paper!
+26. The difference between math on integers, fixed points, 32-bit floats, and 64-bit doubles is not as big as you might think.
+27. Consider ways of rephrasing your math to eliminate expensive operations.
+
+*/
+
+
 
 int main() {
 
