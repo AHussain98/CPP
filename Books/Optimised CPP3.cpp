@@ -127,8 +127,215 @@ error prone.
 
 In C++, double precision calculations are just as fast as single precision, and template classes are MORE efficient than polumorphous classes
 
-// Upto point 7 of Optimised C++
+/* Variables and objects are stored in different parts of the memory, depending on how they
+are declared in a C++ program. This has influence on the efficiency of the data cache. Data caching is poor if data are scattered randomly around in the memory. It is
+therefore important to understand how variables are stored
 
+Variables and objects declared inside a function are stored on the stack (generally)
+
+Every time a function is called, it allocates the required amount of space on
+the stack for all these purposes. This memory space is freed when the function returns. The
+next time a function is called, it can use the same space for the parameters of the new
+function.
+
+The stack is the most efficient memory space to store data in because the same range of
+memory addresses is reused again and again. It is almost certain that this part of the
+memory is mirrored in the level-1 data cache if there are no big arrays.
+
+The lesson we can learn from this is that all variables and objects should preferably be
+declared inside the function in which they are used.
+
+Variables that are declared outside of any function are called global variables. They can be
+accessed from any function. Global variables are stored in a static part of the memory. The
+static memory is also used for variables declared with the static keyword, for floating
+point constants, string constants, array initializer lists, switch statement jump tables, and
+virtual function tables.
+
+The advantage of static data is that it can be initialized to desired values before the program
+starts. The disadvantage is that the memory space is occupied throughout the whole
+program execution, even if the variable is only used in a small part of the program. This
+makes data caching less efficient because the memory space cannot be reused for another
+purpose.
+
+Do not make variables global if you can avoid it. Global variables may be needed for
+communication between different threads, but that is about the only situation where they are
+unavoidable. It may be useful to make a variable global if it is accessed by several different
+functions and you want to avoid the overhead of transferring the variable as function
+parameter. But it may be a better solution to make the functions that access the saved
+variable members of the same class and store the shared variable inside the class. 
+*/
+
+// it is preferable to declare a lookup table static and constant
+float someFunc(int x) {
+	static const float list[] = { 1.1, 2.2, 3.3, 4.4, 5.5 };
+	return list[x];
+}
+// due to be being static and const, the list does not need to be initialised every time the function is called
+// The static declaration helps the compiler decide that the table can be reused from one call to the next. The const declaration helps the compiler see that the table never changes.
+// A static declaration on an initialized variable inside a function means that the variable has to be initialized the first time the function is called, but not on subsequent calls.
+// This is inefficient because the function needs extra overhead to check whether it called for the first time or it has been called before. 
+// The const declaration helps the compiler decide that the check for first call is not needed. 
+// Some compilers are able to optimize the lookup table anyway, but it is best to put both static and const on lookup tables in order to optimize performance on all compilers
+
+// string constants and floating point constants are also often stored in static memory
+/*
+a = b * 3.5;
+c = d + 3.5;
+Here, the constant 3.5 will be stored in static memory. Most compilers will recognize that
+the two constants are identical so that only one constant needs to be stored. All identical
+constants in the entire program will be joined together in order to minimize the amount of
+cache space used for constants.
+Integer constants are usually included as part of the instruction code. You can assume that
+there are no caching problems for integer constants.*/
+
+/* 
+
+A limited number of variables can be stored in registers instead of main memory. A register
+is a small piece of memory inside the CPU used for temporary storage. Variables that are
+stored in registers are accessed very fast. All optimizing compilers will automatically choose
+the most often used variables in a function for register storage. The same register can be
+used for multiple variables as long as their uses (live ranges) do not overlap.
+
+Local variables are particularly suited for register storage. This is another reason for
+preferring local variables.
+The number of registers is limited. There are approximately six integer registers available for
+general purposes in 32-bit x86 operating systems and fourteen integer registers in 64-bit
+systems.
+
+Floating point variables use a different kind of registers. There are eight floating point
+registers available in 32-bit operating systems, sixteen in 64-bit operating systems, and
+thirty two when the AVX512 instruction set is enabled in 64-bit mode. Some compilers have
+difficulties making floating point register variables in 32-bit mode unless the SSE instruction
+set (or higher) is enabled.
+
+The volatile keyword specifies that a variable can be changed by another thread. This
+prevents the compiler from making optimizations that rely on the assumption that the
+variable always has the value it was assigned previously in the code. Example:
+// Example 7.3. Explain volatile
+
+volatile int seconds; // incremented every second by another thread
+void DelayFiveSeconds() {
+seconds = 0;
+while (seconds < 5) {
+// do nothing while seconds count to 5
+}
+}
+
+In this example, the DelayFiveSeconds function will wait until seconds has been
+incremented to 5 by another thread. If seconds was not declared volatile then an
+optimizing compiler would assume that seconds remains zero in the while loop because
+nothing inside the loop can change the value. The loop would be while (0 < 5) {}
+which would be an infinite loop.
+The effect of the keyword volatile is that it makes sure the variable is stored in memory
+rather than in a register and prevents all optimizations on the variable. This can be useful in
+test situations to avoid that some expression is optimized away.
+Note that volatile does not mean atomic. It will not prevent two threads from attempting
+to write the variable at the same time. The code in the above example may fail in the event
+that it attempts to set seconds to zero at the same time as the other thread increments
+seconds. A safer implementation would only read the value of seconds and wait until the
+value has changed five times.
+
+Most compilers can make thread-local storage of static and global variables by using the
+keyword thread_local, __thread or __declspec(thread). Such variables have
+one instance for each thread. Thread-local storage is inefficient because it is accessed
+through a pointer stored in a thread environment block. Static thread-local storage should
+be avoided, if possible, and replaced by storage on the thread's own stack. Non-static variables and objects that are declared in the thread function, or in any
+function called by the thread function, will be stored on the thread's stack. These variables
+and objects will have a separate instance for each thread. The need for static thread-local
+storage can be avoided in most cases by declaring the variables or objects inside the thread
+function.
+
+Dynamic memory allocation is done with the operators new and delete or with the
+functions malloc and free. These operators and functions consume a significant amount
+of time. A part of memory called the heap is reserved for dynamic allocation. The heap can
+easily become fragmented when objects of different sizes are allocated and deallocated in
+random order. The heap manager can spend a lot of time cleaning up spaces that are no
+longer used and searching for vacant spaces. This is called garbage collection. Objects that
+are allocated in sequence are not necessarily stored sequentially in memory. They may be
+scattered around at different places when the heap has become fragmented. This makes
+data caching inefficient.
+Dynamic memory allocation also tends to make the code more complicated and error-prone.
+The program has to keep pointers to all allocated objects and keep track of when they are
+no longer used. It is important that all allocated objects are also deallocated in all possible
+cases of program flow. Failure to do so is a common source of error known as memory leak.
+An even worse kind of error is to access an object after it has been deallocated. The
+program logic may need extra overhead to prevent such errors.
+
+Some programming languages, such as Java, use dynamic memory allocation for all
+objects. This is of course inefficient.
+
+
+Variables declared inside a class are stored in the order in which they appear in the class
+declaration. The type of storage is determined when the object of the class is declared. An
+object of a class, structure, or union can use any of the storage methods mentioned above.
+An object cannot be stored in a register except in the simplest cases, but its data members
+can be copied into registers.
+
+A class member variable with the static modifier will be stored in static memory and will
+have one and only one instance. Non-static members of the same class will be stored with
+each instance of the class.
+
+Storing variables in a class or structure is a good way of making sure that variables that are
+used in the same part of the program are also stored near each oher
+
+The compiler will always select the most efficient integer size if you declare an int, without
+specifying the size. Integers of smaller sizes (char, short int) are only slightly less
+efficient. In many cases, the compiler will convert these types to integers of the default size
+when doing calculations, and then use only the lower 8 or 16 bits of the result. You can
+assume that the type conversion takes zero or one clock cycle.
+
+The unsigned integer type size_t is 32 bits in 32-bit systems and 64 bits in 64-bit systems.
+It is intended for array sizes and array indices when you want to make sure that overflow
+never occurs, even for arrays bigger than 2 GB.
+
+In most cases, there is no difference in speed between using signed and unsigned integers.
+But there are a few cases where it matters:
+• Division by a constant: Unsigned is faster than signed when you divide an integer with a
+constant. This also applies to the modulo operator %.
+• Conversion to floating point is faster with signed than with unsigned integers for most
+instruction sets.
+• Overflow behaves differently on signed and unsigned variables. An overflow of an
+unsigned variable produces a low positive result. An overflow of a signed variable is
+officially undefined. The normal behavior is wrap-around of positive overflow to a
+negative value, but the compiler may optimize away branches that depend on overflow,
+based on the assumption that overflow does not occur.
+The conversion between signed and unsigned integers is costless. It is simply a matter of
+interpreting the same bits differently. A negative integer will be interpreted as a very large
+positive number when converted to unsigned.
+
+Integer operations are generally very fast. Simple integer operations such as addition,
+subtraction, comparison, bit operations and shift operations take only one clock cycle on
+most microprocessors.
+Multiplication and division take longer time. Integer multiplication takes 11 clock cycles on
+Pentium 4 processors, and 3 - 4 clock cycles on most other microprocessors. Integer
+division takes 40 - 80 clock cycles, depending on the microprocessor.
+
+
+The pre-increment operator ++i and the post-increment operator i++ are as fast as
+additions. When used simply to increment an integer variable, it makes no difference
+whether you use pre-increment or post-increment. The effect is simply identical. For
+example,
+for (i=0; i<n; i++) is the same as for (i=0; i<n; ++i). But when the result of
+the expression is used, then there may be a difference in efficiency. For example,
+x = array[i++] is more efficient than x = array[++i] because in the latter case,
+the calculation of the address of the array element has to wait for the new value of i which
+will delay the availability of x for approximately two clock cycles. Obviously, the initial value
+of i must be adjusted if you change pre-increment to post-increment.
+There are also situations where pre-increment is more efficient than post-increment. For
+example, in the case a = ++b; the compiler will recognize that the values of a and b are
+the same after this statement so that it can use the same register for both, while the
+expression a = b++; will make the values of a and b different so that they cannot use the
+same register.
+Everything that is said here about increment operators also applies to decrement operators
+on integer variables.
+
+An enum is simply an integer in disguise. Enums are exactly as efficient as integers.
+Note that the enumerators (value names) will clash with any variable or function having the
+same name. Enums in header files should therefore have long and unique enumerator
+names or be put into a namespace.
+
+
+Upto page 33
 
 */
 
