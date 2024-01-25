@@ -3,6 +3,7 @@
 # include <vector>
 # include <algorithm>
 # include <numbers>
+# include <cmath>
 
 std::vector<int> v{ 1,2,3 };
 
@@ -49,7 +50,7 @@ void blackScholes::compute_norm_args(double vol) {
 
 	d_1 = numer / vol_sqrt_time;
 
-	d_2 = d1 - vol_sqrt_time;
+	d_2 = d_1 - vol_sqrt_time;
 }
 
 
@@ -83,6 +84,107 @@ double blackScholes::operator() (double vol) {
 }
 
 // using the payoff as an enum class and casting it allows us to avoid several extra lines in an if/else statement
+
+// function for calculation of implied volatility
+double implied_volatility(blackScholes bsc, double opt_mkt_price, double x0, double x1, double tol, unsigned max_iter) 
+{  // function first takes in a black scholes object, followed by opt_market_price which is obersved in the market
+   // x0 and x1 are initial guesses
+	double y0 = bsc(x0) - opt_mkt_price;
+	double y1 = bsc(x1) - opt_mkt_price;
+
+	double impl_vol = 0.0;
+	unsigned count_iter;
+	for (count_iter = 0; count_iter <= max_iter; ++count_iter) {  // secant method for working out implied volatility
+		if (std::abs(x1 - x0) > tol) {
+			impl_vol = x1 - (x1 - x0) * y1 / (y1 - y0);
+
+			x0 = x1;
+			x1 = impl_vol;
+			y0 = y1;
+			y1 = bsc(x1) - opt_mkt_price;  // can have this inside a lambda since we do the same for y1 and y2
+		}
+		else {
+			break;
+		}
+	}
+	if (count_iter < max_iter) {
+		return impl_vol;
+}
+	else {
+		return std::nan(" ");
+	}
+
+}
+
+double GetOneGaussianBySummation();
+double GetOneGaussianByBoxMuller();
+
+
+// declare a simple implementation of a Monte Carlo call option pricer
+
+double SimpleMonteCarlo(const PayOff& ThePayOff, double Expiry, double Strike, double Spot, double Vol, double r, unsigned long NumberOfPaths);
+
+// classes are much easier to design and think about if you map them to a real world object
+// e.g. a option class should only know about the information you'd find on an option's term sheet
+
+// use a class to encapsulate the notion of the pay-off of a vanilla function
+
+class PayOff 
+{
+public:
+	enum class OptionType { Put, Call };  // Option can be a put or a call, if we ever want more than put or call, we can add them to the enum Class
+	PayOff(double Strike_, OptionType TheOptionsType_);  // custom constructor
+	double operator() (double Spot) const;  // PayOff is a functor, returns a double, given the vaue of spot, the functor returns the payoff
+	// functor is const, it does not affect the PayOff object 
+private:
+	double Strike;  // make these private so we can control how external code can access them
+	OptionType TheOptionsType;
+};
+
+// if we want the method to be useable by const objects, the method must be const, so const PayOff objects can use the const functor
+// remember that objects can be declared const too
+
+PayOff::PayOff(double Strike_, OptionType TheOptionsType_) : Strike(Strike_), TheOptionsType(TheOptionsType_) {
+
+}
+
+double PayOff::operator() (double spot) const {
+	
+	switch (TheOptionsType) 
+	{
+	case OptionType::Call:
+		return std::max(spot - Strike, 0.0);
+
+	case OptionType::Put:
+		return std::max(Strike - spot, 0.0);
+
+	default:
+		throw("unknown option type found");
+	}
+}
+
+// now implement the monte carlo using a payoff object which has the strike hidden in it
+
+double SimpleMonteCarlo(const PayOff& ThePayOff, double Expiry, double Strike, double Spot, double Vol, double r, unsigned long NumberOfPaths) {
+	double variance = Vol * Vol * Expiry;
+	double rootVariance = std::sqrt(variance);
+	double itoCorrection = -0.5 * variance;
+
+	double movedSpot = Spot * std::exp(r * Expiry + itoCorrection);
+	double thisSpot;
+	double runningSum = 0;
+
+	for (unsigned long i = 0; i < NumberOfPaths; ++i) {
+		double thisGaussian = GetOneGaussianByBoxMuller();
+		thisSpot = movedSpot * exp(rootVariance * thisGaussian);
+		double thisPayOff = ThePayOff(thisSpot);  // payoff passed by reference to const since we have no need to change it
+		runningSum += thisPayOff;
+	}
+
+	double mean = runningSum / NumberOfPaths;
+	mean *= std::exp(-r * Expiry);
+	return mean;
+}
 
 
 int main() {
