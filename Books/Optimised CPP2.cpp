@@ -873,6 +873,23 @@ Here is the runtime:
 6-threads: 8.25 sec # false sharing
 6-threads: 0.21 sec # true sharing
 
+To a first approximation, a single 16-core processor is the same as 4 quad-core processors or 16 single-core processors: in each case the system can run 16 threads concurrently. 
+If you want to take advantage of this, your application must have at least 16
+threads. If it has fewer than 16, you’re leaving processor power on the table (unless
+the system is running other applications too, but we’ll ignore that possibility for now).
+On the other hand, if you have more than 16 threads ready to run (and not blocked,
+waiting for something), your application will waste processor time switching between
+the threads, as discussed in chapter 1. When this happens, the situation is called oversubscription
+
+Using std::thread::hardware_concurrency() directly requires care; your code
+doesn’t take into account any of the other threads that are running on the system
+unless you explicitly share that information. In the worst-case scenario, if multiple
+threads call a function that uses std::thread::hardware_concurrency() for scaling
+at the same time, there will be huge oversubscription. std::async() avoids this problem because the library is aware of all calls and can schedule appropriately. Careful
+use of thread pools can also avoid this problem.
+
+
+
 
 */
 
