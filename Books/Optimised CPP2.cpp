@@ -890,6 +890,85 @@ use of thread pools can also avoid this problem.
 
 Its crucial to remember that every core of a multi-core processor has a dedicated L1 cache and is usually not shared between the cores. The L2 cache, and higher-level caches, may be shared between the cores.
 
+If two threads are executing concurrently on different processors and they’re both
+reading the same data, this usually won’t cause a problem; the data will be copied into
+their respective caches, and both processors can proceed. But if one of the threads
+modifies the data, this change then has to propagate to the cache on the other core,
+which takes time. Depending on the nature of the operations on the two threads, and
+the memory orderings used for the operations, this modification may cause the second processor to stop in its tracks and wait for the change to propagate through the
+memory hardware. In terms of CPU instructions, this can be a phenomenally slow operation, equivalent to many hundreds of individual instructions, although the exact timing depends primarily on the physical structure of the hardware.
+ Consider the following simple piece of code:
+std::atomic<unsigned long> counter(0);
+void processing_loop()
+{
+ while(counter.fetch_add(1,std::memory_order_relaxed)<100000000)
+ {
+ do_something();
+ }
+}
+The counter is global, so any threads that call processing_loop() are modifying the
+same variable. Therefore, for each increment the processor must ensure it has an
+up-to-date copy of counter in its cache, modify the value, and publish it to other processors. Even though you’re using std::memory_order_relaxed, so the compiler
+doesn’t have to synchronize any other data, fetch_add is a read-modify-write operation and therefore needs to retrieve the most recent value of the variable. If another
+Factors affecting the performance of concurrent code 263
+thread on another processor is running the same code, the data for counter must
+therefore be passed back and forth between the two processors and their corresponding caches so that each processor has the latest value for counter when it does the
+increment. If do_something() is short enough, or if there are too many processors
+running this code, the processors might find themselves waiting for each other; one
+processor is ready to update the value, but another processor is currently doing that,
+so it has to wait until the second processor has completed its update and the change
+has propagated. This situation is called high contention. If the processors rarely have to
+wait for each other, you have low contention.
+ In a loop like this one, the data for counter will be passed back and forth between
+the caches many times. This is called cache ping-pong, and it can seriously impact the
+performance of the application. If a processor stalls because it has to wait for a cache
+transfer, it can’t do any work in the meantime, even if there are other threads waiting
+that could do useful work, so this is bad news for the whole application.
+ You might think that this won’t happen to you; after all, you don’t have any loops
+like that. Are you sure? What about mutex locks? If you acquire a mutex in a loop,
+your code is similar to the previous code from the point of view of data accesses. In
+order to lock the mutex, another thread must transfer the data that makes up the
+mutex to its processor and modify it. When it’s done, it modifies the mutex again to
+unlock it, and the mutex data has to be transferred to the next thread to acquire the
+mutex. This transfer time is in addition to any time that the second thread has to wait
+for the first to release the mutex:
+std::mutex m;
+my_data data;
+void processing_loop_with_mutex()
+{
+ while(true)
+ {
+ std::lock_guard<std::mutex> lk(m);
+ if(done_processing(data)) break;
+ }
+}
+Now, here’s the worst part: if the data and mutex are accessed by more than one
+thread, then as you add more cores and processors to the system, it becomes more
+likely that you will get high contention and one processor having to wait for another.
+If you’re using multiple threads to process the same data more quickly, the threads are
+competing for the data and thus competing for the same mutex. The more of them
+there are, the more likely they’ll try to acquire the mutex at the same time, or access
+the atomic variable at the same time, and so forth.
+ The effects of contention with mutexes are usually different from the effects of
+contention with atomic operations for the simple reason that the use of a mutex naturally serializes threads at the operating system level rather than at the processor level.
+If you have enough threads ready to run, the operating system can schedule another
+thread to run while one thread is waiting for the mutex, whereas a processor stall prevents any threads from running on that processor. But it will still impact the performance of those threads that are competing for the mutex; they can only run one at a
+time, after all.
+ Back in chapter 3, you saw how a rarely updated data structure can be protected
+with a single-writer, multiple-reader mutex (see section 3.3.2). Cache ping-pong
+effects can nullify the benefits of this mutex if the workload is unfavorable, because all
+threads accessing the data (even reader threads) still have to modify the mutex itself.
+As the number of processors accessing the data goes up, the contention on the mutex
+itself increases, and the cache line holding the mutex must be transferred between
+cores, potentially increasing the time taken to acquire and release locks to undesirable levels. There are techniques to ameliorate this problem by spreading out the
+mutex across multiple cache lines, but unless you implement your own mutex, you are
+subject to whatever your system provides.
+ If this cache ping-pong is bad, how can you avoid it? As you’ll see later in the chapter, the answer ties in nicely with general guidelines for improving the potential for
+concurrency: do what you can to reduce the potential for two threads competing for
+the same memory location.
+ It’s not quite that simple, though; things never are. Even if a particular memory
+location is only ever accessed by one thread, you can still get cache ping-pong due to
+an effect known as false sharing
 
 */
 
