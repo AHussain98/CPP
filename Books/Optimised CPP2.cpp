@@ -888,7 +888,7 @@ threads call a function that uses std::thread::hardware_concurrency() for scalin
 at the same time, there will be huge oversubscription. std::async() avoids this problem because the library is aware of all calls and can schedule appropriately. Careful
 use of thread pools can also avoid this problem.
 
-
+Its crucial to remember that every core of a multi-core processor has a dedicated L1 cache and is usually not shared between the cores. The L2 cache, and higher-level caches, may be shared between the cores.
 
 
 */
