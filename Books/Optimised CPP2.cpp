@@ -686,6 +686,94 @@ Use Cache-Friendly Data Structures:
 26. The difference between math on integers, fixed points, 32-bit floats, and 64-bit doubles is not as big as you might think.
 27. Consider ways of rephrasing your math to eliminate expensive operations.
 
+
+The compiler sometimes needs to add extra bytes, padding, in our user-defined
+types. When we define data members in a class or struct, the compiler is forced
+to place the members in the same order as we define them. However, the
+compiler also has to ensure that data members inside the class have the correct
+alignment; hence, it needs to add padding between data members if necessary.
+For example, assume we have a class defined as follows:
+class Document {
+bool is_cached_{};
+double rank_{};
+int id_{};
+};
+std::cout << sizeof(Document) << '\n'; // Possible output is 24
+The reason for the possible output being 24 is that the compiler inserts padding
+after bool and int to fulfill the alignment requirements of the individual data
+members and the entire class. The compiler converts the Document class to
+something like this:
+class Document {
+bool is_cached_{};
+char padding1[7]; // Invisible padding inserted by compiler
+double rank_{};
+int id_{};
+char padding2[4]; // Invisible padding inserted by compiler
+};
+The first padding between bool and double is 7 bytes, since the rank_ data member
+of the double type has an alignment of 8 bytes. The second padding that is added
+after int is 4 bytes. This is needed in order to fulfill the alignment requirements
+of the Document class itself. The member with the largest alignment requirement
+also determines the alignment requirement for the entire data structure. In our
+example, this means that the total size of the Document class must be a multiple of
+8, since it contains a double value that is 8-byte aligned.
+We now realize that we can rearrange the order of the data members in the
+Document class in a way that minimizes the padding inserted by the compiler, by
+starting with types with the biggest alignment requirements. Let's create a new
+version of the Document class:
+// Version 2 of Document class
+class Document {
+double rank_{};
+int id_{};
+bool is_cached_{};
+};
+With the rearrangement of the members, the compiler now only needs to pad
+after the is_cached_ data member to adjust for the alignment of Document. This is
+how the class will look after padding:
+// Version 2 of Document class after padding
+class Document {
+double rank_{};
+int id_{};
+bool is_cached_{};
+char padding[3]; // Invisible padding inserted by compiler
+};
+The size of the new Document class is now only 16 bytes, compared to the first
+version, which was 24 bytes. We can verify this by using the sizeof operator
+again on our updated version of Document:
+std::cout << sizeof(Document) << '\n'; // Possible output is 16
+As a general rule, you can place the biggest data members in the beginning and
+the smallest members at the end. In this way, you can minimize the memory
+overhead caused by padding. Later on, we will see that we need to think about
+alignment when placing objects in memory regions that we have allocated,
+before we know the alignment of the objects that we are creating.
+From a performance perspective, there can also be cases where you want to align
+objects to cache lines to minimize the number of cache lines an object spans
+over. While we are on the subject of cache friendliness, it should also be
+mentioned that it can be beneficial to place multiple data members that are
+frequently used together next to each other
+
+
+False sharing, or destructive interference, can degrade performance. It occurs
+when two threads use some data (that is not logically shared between the
+threads) but happen to be located in the same cache line. Imagine what would
+happen if the two threads are executing on different cores and constantly update
+the variable that resides on the shared cache line. The threads will invalidate the
+cache line for each other although there is no true sharing of data between the
+threads.
+False sharing will most likely occur when using global data or dynamicallyallocated data that is shared between threads. An example where false sharing is
+likely to occur is when allocating an array that is shared between threads, but
+each thread is only using a single element of the array.
+The solution to this problem is to pad each element in the array so that two
+adjacent elements cannot reside on the same cache line. Since C++17, there is a
+portable way of doing this using
+the std::hardware_destructive_interference_size constant defined in <new> in
+combination with the alignas specifier. The following example demonstrates how
+to create an element that prevents false sharing:
+struct alignas(std::hardware_destructive_interference_size) Element {
+int counter_{};
+};
+auto elements = std::vector<Element>(num_threads);
+The elements in the vector are now guaranteed to reside on separate cache lines.
 */
 
 
