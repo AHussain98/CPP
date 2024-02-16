@@ -774,6 +774,106 @@ int counter_{};
 };
 auto elements = std::vector<Element>(num_threads);
 The elements in the vector are now guaranteed to reside on separate cache lines.
+
+Data/instructions are not transported individually to the cache. 
+Instead, data is transferred in blocks, and block sizes tend to get larger at lower levels of the memory hierarchy.
+
+Each cache is organized into a series of sets, with each set having a number of lines. 
+Each line holds a single block of data.
+
+The individual bits of a memory address are used to determine which set, tag, and block offset of the cache to which to write a block of data.
+
+A cache hit occurs when the desired data block exists in the cache. 
+Otherwise, a cache miss occurs, and a lookup is performed on the next lower level of the memory hierarchy (which can be cache or main memory).
+
+The valid bit indicates if a block at a particular line in the cache is safe to use. 
+If the valid bit is set to 0, the data block at that line cannot be used (e.g., the block could contain data from an exited process).
+
+Information is written to cache/memory based on two main strategies. 
+In the write-through strategy, the data is written to cache and main memory simultaneously. 
+In the write-back strategy, data is written only to cache and gets written to lower levels in the hierarchy after the block is evicted from the cache.
+
+// Read through diveintosystems webpage
+
+in shared memory architectures, each core can have its own cache and that multiple cores can share a common cache.
+each core could have its own L1 cache, and the cores can share a common L2 cache
+
+A data cache and an instruction cache are both types of cache memory used in computer systems to improve performance by storing frequently accessed data and instructions closer to the CPU for faster retrieval.
+
+A data cache is a small, high-speed memory that temporarily holds data that the CPU frequently accesses. When the CPU needs to read or write data, it first checks the data cache. If the requested data is found in the cache (cache hit), it can be accessed much faster than if it had to be retrieved from the main memory (cache miss). This can significantly reduce the overall time required for data operations and improve system performance.
+
+Similarly, an instruction cache stores frequently used instructions fetched from the main memory. The CPU retrieves instructions from the cache instead of fetching them from the slower main memory whenever possible. By doing so, it reduces the time needed to execute instructions, enhancing the overall speed of the system.
+
+The main difference between the two cache types is their purpose: a data cache focuses on storing data, while an instruction cache focuses on storing instructions. They work in tandem to optimize data retrieval and execution, ultimately making the computer system more efficient.
+
+Both data and instruction caches come with pros and cons. Their benefits include faster access times, reduced latency, and improved system performance. However, cache memory is limited in size, and not all data or instructions can fit into the cache. When there is a cache miss, meaning the requested data or instruction is not found in the cache, it has to be fetched from the main memory, causing a delay.
+
+Data and instruction caches play essential roles in enhancing the speed and efficiency of computer systems. They work together to reduce the time required for data retrieval and instruction execution.
+
+ False sharing is a performance issue that occurs when multiple threads or processes access different variables that happen to be located in the same cache line. 
+ A cache line is the unit of data transferred between the main memory and the cache. 
+ The cache is designed to transfer entire cache lines at a time, so when one thread updates a variable in a cache line, 
+ it can cause the entire cache line to be invalidated and reloaded, even if the other variables in that cache line were not modified.
+
+False sharing example:
+
+double estimate_pi_false_share(uint64_t num_steps) {
+    auto max_threads = omp_get_max_threads();
+    auto delta = 1.0 / static_cast<double>(num_steps);
+    std::vector<double> partial_sum(max_threads, 0.0);
+    int num_threads;
+#pragma omp parallel default(none) shared(num_steps, delta, max_threads, num_threads, partial_sum)
+    {
+        if (omp_get_thread_num() == 0) num_threads = omp_get_num_threads();
+        for (uint64_t step = omp_get_thread_num(); step < num_steps; step += omp_get_num_threads()) {
+            auto x = delta * (static_cast<double>(step) + 0.5);
+            partial_sum[omp_get_thread_num()] += 4.0 / (1 + x * x);
+        }
+    }
+    return std::accumulate(std::begin(partial_sum), std::begin(partial_sum) + num_threads, 0.0) * delta;
+}
+You don’t need to understand what the function does. It suffices to say that it runs a parallel for-loop where each thread accumulates its partial sum into the element in the array corresponding to the thread id. In particular, the line below is where we need to pay attention to
+
+partial_sum[omp_get_thread_num()] += 4.0 / (1 + x * x);
+Here, omp_get_thread_num() returns an id 0 to N where N is the number of concurrent threads running. Note that each thread is writing to only each position, so there is no race condition involved. However, as I mentioned above, the problem is that all the threads are writing to elements that are adjacent in an array. This leads to false sharing — as soon as one thread updates the value in the array, the cache line needs to be reloaded.
+
+Let’s run and measure the runtime of a single-threaded version vs multi-threaded version. Ideally, the multi-threaded implementation should reduce the runtime by # threads. However, what we see is that the multi-threaded version runs 8x SLOWER!
+
+1-thread: 1.16 sec
+6-threads: 8.25 sec
+False sharing can hurt performance significantly because it can lead to unnecessary cache line invalidation and reloading. When a cache line is invalidated and reloaded, it causes the processor to stall and wait for the data to be fetched from main memory, which can be a relatively slow operation compared to accessing data from the cache. This can result in significant delays and reduce the overall performance of the system.
+
+So what is the fix? Each thread must not update the same cache-line frequently. We can create a temporary variable for each thread on its stack and update the partial sum there in the loop. At the end, we write to the partial sum array just once.
+
+--- false sharing
++++ true sharing
+@@ -1,4 +1,4 @@
+-double estimate_pi_false_share(uint64_t num_steps) {
++double estimate_pi_true_share(uint64_t num_steps) {
+     auto max_threads = omp_get_max_threads();
+     auto delta = 1.0 / static_cast<double>(num_steps);
+     std::vector<double> partial_sum(max_threads, 0.0);
+@@ -6,10 +6,12 @@
+ #pragma omp parallel default(none) shared(num_steps, delta, max_threads, num_threads, partial_sum)
+     {
+         if (omp_get_thread_num() == 0) num_threads = omp_get_num_threads();
++        auto local_sum = 0.0;
+         for (uint64_t step = omp_get_thread_num(); step < num_steps; step += omp_get_num_threads()) {
+             auto x = delta * (static_cast<double>(step) + 0.5);
+-            partial_sum[omp_get_thread_num()] += 4.0 / (1 + x * x);
++            local_sum += 4.0 / (1 + x * x);
+         }
++        partial_sum[omp_get_thread_num()] = local_sum;
+     }
+     return std::accumulate(std::begin(partial_sum), std::begin(partial_sum) + num_threads, 0.0) * delta;
+ }
+Here is the runtime:
+
+1-thread: 1.16 sec
+6-threads: 8.25 sec # false sharing
+6-threads: 0.21 sec # true sharing
+
+
 */
 
 
