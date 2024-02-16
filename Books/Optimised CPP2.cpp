@@ -970,6 +970,11 @@ the same memory location.
 location is only ever accessed by one thread, you can still get cache ping-pong due to
 an effect known as false sharing
 
+
+we can return data asynchronously using futures and promises, which represent two sides of a value. 
+The future is the receiving side of the value and the promise is the returning side of the value.
+
+
 */
 
 
