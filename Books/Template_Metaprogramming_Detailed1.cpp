@@ -121,7 +121,7 @@ public:
 
     template <typename U>
 	U as() const {
-		return static_cast<U>(value);
+		return static_cast<U = int>(value);  // default type is int
 	} // cast value from T to U
 private:
 	T value;
@@ -130,6 +130,167 @@ private:
 // these parameters represent types supplied at instantiation explicitly by the user or implicitly by the compiler when it can deduce them
 // these kind of template parameters are called type parameters
 // templates can also have non-type template parameters and template type template parameters
+
+// type template parameters are parameters representing types supplied as arguments during the template instantiation
+// type template parameters are introduced with either the class or typename keywords
+// types can also have default parameters, assigned with = like default function parameters
+
+// c++11 introduced variadic templates, which have a variable number of arguments
+// a template parameter that accepts zero or more arguments is called a parameter pack
+
+// template arguments don't always have to represent types, they can also be compile type epressions, constants or addresses
+// parameters supplied with compile time expressions are called non-type template parameters, this category of parameters can pnly have a structural type
+// structural types: integrals, floating points, enum, pointer to object, function or member, lvalue reference to object or function
+// cv qualified forms of these types can also be used for non-type template parameters
+
+// examples of non-type template parameters:
+template <int V>  // integral type used
+class foo{};
+
+template <int V = 42>  // default value used, non-type template parameter
+class foo{};
+
+template<int... V>  // parameter pack
+class foo{};
+
+// fixed size array class
+template<typename T, size_t S>
+class buffer {
+	T data_[S];
+public:
+	constexpr T* data() const { return data_; }
+	constexpr T& operator[] (const size_t index)
+	{
+		return data_[index];
+	}
+	constexpr const T& operator[] (const size_t index) const  // const version of the index operator
+	{
+		return data_[index];
+	}
+};
+
+// instantiate 
+buffer<int, 10> b1;  // instantiate the buffer, second parameter is non-type, can be exavluated at compile time
+buffer<int, 2 * 5> b2; // second parameter is non-type, can be evaluated at compile time
+
+// 10 and 2.5 are two expressions that evaluate to the same compile time value
+// these two definitions are therefore equivalent, the compiler will generate the same class code to create these objects
+// now specialisations:
+
+template<>  // this indicates a specialisation of a templated type previously defined
+class buffer<int, 10>  // explicit specialisation
+{
+	int data_[10];
+public:
+	constexpr int* data() const;
+	constexpr int& operator[](const size_t index);
+	constexpr const int& operator[](const size_t index) const;
+};
+
+// these two buffer types are different
+// the use of structural types such as integer, floating point, or enums are encountered in practice more often 
+
+struct device
+{
+	virtual void output() = 0;
+	virtual ~device();
+};
+
+template <void (*action)()>  // function pointer is the template parameter
+struct smart_device : device
+{
+	void output() override
+	{
+		(*action)();
+	}
+};
+
+void say_hello_in_english()
+{
+	std::cout << "Hello, world! \n";
+}
+
+void say_hello_in_spanish()
+{
+	std::cout << "Hola mundo! \n";
+}
+
+auto w1 = std::make_unique<smart_device<&say_hello_in_english>>();  // create a unique pointer 
+w1->output();
+
+auto w2 = std::make_unique<smart_device<&say_hello_in_spanish>>();
+w2->output();
+
+// w1 and w2 are two unique ptr objects pointing to two different instances of the smart_device class
+
+// lets try this again with pointer to member function
+template <typename Command, void (Command::*action)() >
+struct smart_device : device
+{
+	smart_device(Command& command) : cmd(command) {}
+	void output() override
+	{
+		(cmd.*action)(); // call the function pointed to by the function pointer
+	}
+private:
+	Command& cmd; // struct hello command then becomes a member of the class
+};
+
+struct hello_command
+{
+	void say_hello_in_english()
+	{
+		std::cout << "Hello, world! \n";
+	}
+	void say_hello_in_spanish()
+	{
+		std::cout << "Hola mundo! \n";
+	}
+};
+
+// as of c++ 17, non-types can also be generated using the auto keyword
+template <auto x>
+auto foo()
+{
+	return x;
+}
+
+// foo<42> f1 returns 42
+// the compiler deduces the template to instntiate as foo<int>
+
+// by default, string literals cannot be used as arguments for non-type template parameters
+// this means foo<"42"> f2 returns an error
+
+template <size_t N>  // wrap the string literal in a structural literal class, store the chars of the string literal in a fixed length array
+struct string_literal
+{
+	constexpr string_literal(const char(&str)[N])
+	{
+		std::copy_n(str, N, value);  // what does copy_N do?
+	}
+
+	char value[N];
+};
+
+template<string_literal x>  // foo template is then changed to string_literal
+auto foo() {
+	return x;
+}
+foo<"42"> f3;  // can now work
+
+
+// the last category of template parameter is templates themselves
+// as of cpp 17, both the class and typename keywords can be used to introduce a template template parameter
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -142,7 +303,14 @@ int main()
 
 	std::cout << a.as<int>();  // loses the 0.5
 
+	hello_command cmd;
 
 
+	auto w3 = std::make_unique<smart_device<hello_command, &hello_command::say_hello_in_english>>(cmd);
+	w3->output();
 
+	auto w4 = std::make_unique<smart_device<hello_command, &hello_command::say_hello_in_spanish>>(cmd);
+	w4->output();
 }
+
+
