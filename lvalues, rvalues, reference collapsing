@@ -1,1 +1,302 @@
+The result of every C++ expression is either an lvalue, or an rvalue. These terms come from C, but the C++ definitions have evolved quite a lot since then, due to the greater expressiveness of the C++ language.
 
+rvalues can be split into two subcategories: xvalues, and prvalues, depending on the details of the expression. These subcategories have slightly different properties, described below.
+
+One of the differences is that xvalues can sometimes be treated the same as lvalues. To cover those cases we have the term glvalue — if something applies to both lvalues and xvalues then it is described as applying to glvalues.
+
+Now for the definitions.
+
+glvalues
+A glvalue is a Generalized lvalue. It is used to refer to something that could be either an lvalue or an xvalue.
+
+rvalues
+The term rvalue is inherited from C, where rvalues are things that can be on the Right side of an assignment. The term rvalue can refer to things that are either xvalues or prvalues.
+
+lvalues
+The term lvalue is inherited from C, where lvalues are things that can be on the Left side of an assignment.
+
+The simplest form of lvalue expression is the name of a variable. Given a variable declaration:
+
+A v1;
+
+The expression v1 is an lvalue of type A.
+
+Any expression that results in an lvalue reference (declared with &) is also an lvalue, so the result of dereferencing a pointer, or calling a function that returns an lvalue reference is also an lvalue. Given the following declarations:
+
+A* p1;
+
+A& r1=v1;
+
+A& f1();
+
+The expression *p1 is an lvalue of type A, as is the expression f1() and the expression r1.
+
+Accessing a member of an object where the object expression is an lvalue is also an lvalue. Thus, accessing members of variables and members of objects accessed through pointers or references yields lvalues. Given
+
+struct B{
+    A a;
+    A b;
+};
+
+B& f2();
+B* p2;
+B v2;
+then f2().a, p2->b and v2.a are all lvalues of type A.
+
+String literals are lvalues, so "hello" is an lvalue of type array of 6 const chars (including the null terminator). This is distinct from other literals, which are prvalues.
+
+Finally, a named object declared with an rvalue reference (declared with &&) is also an lvalue. This is probably the most confusing of the rules, if for no other reason than that it is called an rvalue reference. The name is just there to indicate that it can bind to an rvalue (see later); once you've declared a variable and given it a name it's an lvalue. This is most commonly encountered in function parameters. For example:
+
+void foo(A&& a){
+}
+Within foo, a is an lvalue (of type A), but it will only bind to rvalues.
+
+xvalues
+An xvalue is an eXpiring value: an unnamed objects that is soon to be destroyed. xvalues may be either treated as glvalues or as rvalues depending on context.
+
+xvalues are slightly unusual in that they usually only arise through explicit casts and function calls. If an expression is cast to an rvalue reference to some type T then the result is an xvalue of type T. e.g. static_cast<A&&>(v1) yields an xvalue of type A.
+
+Similarly, if the return type of a function is an rvalue reference to some type T then the result is an xvalue of type T. This is the case with std::move(), which is declared as:
+
+template <typename T>
+constexpr remove_reference_t<T>&&
+move(T&& t) noexcept;
+Thus std::move(v1) is an xvalue of type A — in this case, the type deduction rules deduce T to be A& since v1 is an lvalue, so the return type is declared to be A&& as remove_reference_t<A&> is just A.
+
+The only other way to get an xvalue is by accessing a member of an rvalue. Thus expressions that access members of temporary objects yield xvalues, and the expression B().a is an xvalue of type A, since the temporary object B() is a prvalue. Similarly, std::move(v2).a is an xvalue, because std::move(v2) is an xvalue, and thus an rvalue.
+
+prvalues
+A prvalue is a Pure rvalue; an rvalue that is not an xvalue.
+
+Literals other than string literals (which are lvalues) are prvalues. So 42 is a prvalue of type int, and 3.141f is a prvalue of type float.
+
+Temporaries are also prvalues. Thus given the definition of A above, the expression A() is a prvalue of type A. This applies to all temporaries: any temporaries created as a result of implicit conversions are thus also prvalues. You can therefore write the following:
+
+int consume_string(std::string&& s);
+int i=consume_string("hello");
+as the string literal "hello" will implicitly convert to a temporary of type std:string, which can then bind to the rvalue reference used for the function parameter, because the temporary is a prvalue.
+
+Reference binding
+Probably the biggest difference between lvalues and rvalues is in how they bind to references, though the differences in the type deduction rules can have a big impact too.
+
+There are two types of references in C++: lvalue references, which are declared with a single ampersand, e.g. T&, and rvalue references which are declared with a double ampersand, e.g. T&&.
+
+lvalue references
+A non-const lvalue reference will only bind to non-const lvalues of the same type, or a class derived from the referenced type.
+
+struct C:A{};
+
+int i=42;
+A a;
+B b;
+C c;
+const A ca{};
+
+A& r1=a;
+A& r2=c;
+//A& r3=b; // error, wrong type
+int& r4=i;
+// int& r5=42; // error, cannot bind rvalue
+//A& r6=ca; // error, cannot bind const object to non const ref
+A& r7=r1;
+// A& r8=A(); // error, cannot bind rvalue
+// A& r9=B().a; // error, cannot bind rvalue
+// A& r10=C(); // error, cannot bind rvalue
+A const lvalue reference on the other hand will also bind to rvalues, though again the object bound to the reference must have the same type as the referenced type, or a class derived from the referenced type. You can bind both const and non-const values to a const lvalue reference.
+
+const A& cr1=a;
+const A& cr2=c;
+//const A& cr3=b; // error, wrong type
+const int& cr4=i;
+const int& cr5=42; // rvalue can bind OK
+const A& cr6=ca; // OK, can bind const object to const ref
+const A& cr7=cr1;
+const A& cr8=A(); // OK, can bind rvalue
+const A& cr9=B().a; // OK, can bind rvalue
+const A& cr10=C(); // OK, can bind rvalue
+const A& cr11=r1;
+If you bind a temporary object (which is a prvalue) to a const lvalue reference, then the lifetime of that temporary is extended to the lifetime of the reference. This means that it is OK to use r8, r9 and r10 later in the code, without running the undefined behaviour that would otherwise accompany an access to a destroyed object.
+
+This lifetime extension does not extend to references initialized from the first reference, so if a function parameter is a const lvalue reference, and gets bound to a temporary passed to the function call, then the temporary is destroyed when the function returns, even if the reference was stored in a longer-lived variable, such as a member of a newly constructed object. You therefore need to take care when dealing with const lvalue references to ensure that you cannot end up with a dangling reference to a destroyed temporary.
+
+volatile and const volatile lvalue references are much less interesting, as volatile is a rarely-used qualifier. However, they essentially behave as expected: volatile T& will bind to a volatile or non-volatile, non-const lvalue of type T or a class derived from T, and volatile const T& will bind to any lvalue of type T or a class derived from T. Note that volatile const lvalue references do not bind to rvalues.
+
+rvalue references
+An rvalue reference will only bind to rvalues of the same type, or a class derived from the referenced type. As for lvalue references, the reference must be const in order to bind to a const object, though const rvalue references are much rarer than const lvalue references.
+
+const A make_const_A();
+
+// A&& rr1=a; // error, cannot bind lvalue to rvalue reference
+A&& rr2=A();
+//A&& rr3=B(); // error, wrong type
+//int&& rr4=i; // error, cannot bind lvalue
+int&& rr5=42;
+//A&& rr6=make_const_A(); // error, cannot bind const object to non const ref
+const A&& rr7=A();
+const A&& rr8=make_const_A();
+A&& rr9=B().a;
+A&& rr10=C();
+A&& rr11=std::move(a); // std::move returns an rvalue
+// A&& rr12=rr11; // error rvalue references are lvalues
+rvalue references extend the lifetime of temporary objects in the same way that const lvalue references do, so the temporaries associated with rr2, rr5, rr7, rr8, rr9, and rr10 will remain alive until the corresponding references are destroyed.
+
+Implicit conversions
+Just because a reference won't bind directly to the value of an expression, doesn't mean you can't initialize it with that expression, if there is an implicit conversion between the types involved.
+
+For example, if you try and initialize a reference-to-A with a D object, and D has an implicit conversion operator that returns an A& then all is well, even though the D object itself cannot bind to the reference: the reference is bound to the result of the conversion operator.
+
+struct D{
+    A a;
+    operator A&() {
+        return a;
+    }
+};
+
+D d;
+A& r=d; // reference bound to result of d.operator A&()
+Similarly, a const lvalue-reference-to-E will bind to an A object if A is implicitly convertible to E, such as with a conversion constructor. In this case, the reference is bound to the temporary E object that results from the conversion (which therefore has its lifetime extended to match that of the reference).
+
+struct E{
+    E(A){}
+};
+
+const E& r=A(); // reference bound to temporary constructed with E(A())
+This allows you to pass string literals to functions taking std::string by const reference:
+
+void foo(std::string const&);
+
+foo("hello"); // ok, reference is bound to temporary std::string object
+Other Properties
+Whether or not an expression is an lvalue or rvalue can affect a few other aspects of your program. These are briefly summarised here, but the details are out of scope of this article.
+
+In general, rvalues cannot be modified, nor can they have their address taken. This means that simple expressions like A()=something or &A() or &42 are ill-formed. However, you can call member functions on rvalues of class type, so X().do_something() is valid (assuming class X has a member function do_something).
+
+Class member functions can be tagged with ref qualifiers to indicate that they can be applied to only rvalues or only lvalues. ref qualifiers can be combined with const, and can be used to distinguish overloads, so you can define different implementations of a function depending whether the object is an lvalue or rvalue.
+
+When the type of a variable or function template parameter is deduce from its initializer, whether the initializer is an lvalue or rvalue can affect the deduced type.
+
+In general, lvalue is:
+
+Is usually on the left hand of an expression, and that’s where the name comes from - “left-value”.
+Something that points to a specific memory location. Whether it’s heap or stack, and it’s addressable.
+Variables are lvalues, and usually variables appear on the left of an expression. For example in an expression int x = 1; x is lvalue. x is also pointing to a memory location where value 1 is.
+Another example is int* y = &x. In this case y is lvalue as well. x is also lvalue, but &x is not!
+Early definitions of lvalue meant “values that are suitable fr left-hand-side or assignment” but that has changed in later versions of the language. For instance const int a = 1; declares lvalue a but obviously it cannot be assigned to, so definition had to be adjusted. Later you’ll see it will cause other confusions!
+Some people say “lvalue” comes from “locator value” i.e. an object that occupies some identifiable location in memory (i.e. has an address).
+
+More lvalue examples
+Name of a variable, as above.
+rvalue
+rvalue is something that doesn’t point anywhere. The name comes from “right-value” because usually it appears on the right side of an expression.
+It is generally short-lived. Sometimes referred to also as “disposable objects”, no one needs to care about them.
+rvalue is like a “thing” which is contained in lvalue.
+Sometimes rvalue is defined by exclusion rule - everything that is not lvalue is rvalue.
+lvalue can always be implicitly converted to lvalue but never the other way around.
+rvalue can be moved around cheaply
+Coming back to express int x = 1;:
+
+x is lvalue (as we know it). It’s long-lived and not short-lived, and it points to a memory location where 1 is. The value of x is 1.
+1 is rvalue, it doesn’t point anywhere, and it’s contained within lvalue x.
+Here is a silly code that doesn’t compile:
+
+int x;
+1 = x; // error: expression must be a modifyable lvalue
+which starts making a bit more sense - compiler tells us that 1 is not a “modifyable lvalue” - yes, it’s “rvalue”. In C++, the left operand of an assignment must be an “lvalue”. And now I understand what that means.
+
+A definition like “a + operator takes two rvalues and returns an rvalue” should also start making sense.
+
+“A useful heuristic to determine whether an expression is an lvalue is to ask if you can take its address. If you can, it typically is. If you can’t, it’s usually an rvalue.”
+
+Effective Modern C++
+References
+Are references lvalues or rvalues? General rule is:
+
+lvalue references can only be bound to lvalues but not rvalues
+
+assumes that all references are lvalues.
+
+In general, there are three kinds of references (they are all called collectively just references regardless of subtype):
+
+lvalue references - objects that we want to change.
+const references - objects we do not want to change (const references).
+rvalue references - objects we do not want to preserve after we have used them, like temporary objects. This kind of reference is the least obvious to grasp from just reading the title.
+The first two are called lvalue references and the last one is rvalue references.
+
+As I said, lvalue references are really obvious and everyone has used them - X& means reference to X. It’s like a pointer that cannot be screwed up and no need to use a special dereferencing syntax. Not much to add.
+
+One odd thing is taking address of a reference:
+
+int i = 1;
+int& ii = i;    // reference to i
+int* ip = &i;	// pointer to i
+int* iip = &ii;	// pointer to i, equivent to previous line
+Basically we cannot take an address of a reference, and by attempting to do so results in taking an address of an object the reference is pointing to.
+
+Another weird thing about references here. To initialise a reference to type T (T&) we need an lvalue of type T, but to initialise a const T& there is no need for lvalue, or even type T! For const references the following process takes place:
+
+Implicit type conversion to T if necessary.
+Resulting value is placed in a temporary variable of type T.
+Temporary variable is used as a value for an initialiser.
+To demonstrate:
+
+int& i = 1;	       // does not work, lvalue required
+const int& i = 1;  // absolutely fine
+const int& i {1};  // same as line above, OK, but syntax preferred in modern C++
+Now it’s the time for a more interesting use case - rvalue references. Starting to guess what it means and run through definition above - rvalue usually means temporary, expression, right side etc. Rvalue references are designed to refer to a temporary object that user can and most probably will modify and that object will never be used again.
+
+A classic example of rvalue reference is a function return value where value returned is function’s local variable which will never be used again after returning as a function result. It’s completely opposite to lvalue reference:
+
+rvalue reference can bind to rvalue, but never to lvalue
+
+Rvalue reference is using && (double ampersand) syntax, some examples:
+
+string get_some_string();
+string ls {"Temporary"};
+
+string&& s = get_some_string();	 // fine, binds rvalue (function local variable) to rvalue reference
+string&& s { ls };				// fails - trying to bind lvalue (ls) to rvalue reference
+string&& s { "Temporary" };	     // fails - trying to bind temporary to rvalue reference
+You could also thing of rvalue references as destructive read - reference that is read from is dead. This is great for optimisations that would otherwise require a copy constructor.
+
+Going Deeper
+Newest versions of C++ are becoming much more advanced, and therefore matters are more complicated. Generally you won’t need to know more than lvalue/rvalue, but if you want to go deeper here you are.
+
+So, there are two properties that matter for an object when it comes to addressing, copying, and moving:
+
+Has Identity (I). The program has the name of, pointer to, or reference to the object so that it is possible to determine if two objects are the same, whether the value of the object has changed, etc.
+Moveable (M). The object may be moved from (i.e., we are allowed to move its value to another location and leave the object in a valid but unspecified state, rather than copying).
+Cool thing is, three out of four of the combinations of these properties are needed to precisely describe the C++ language rules! Fourth combination - without identity and no ability to move - is useless. Now we can put it in a nice diagram:
+
+image-20211206212335535
+
+So, a classical lvalue is something that has an identity and cannot be moved and classical rvalue is anything that we allowed to move from. Others are advanced edge cases:
+
+prvalue is a pure rvalue.
+grvalue is generalised rvalue.
+xvalue is extraordinary or expert value - it’s quite imaginative and rare.
+Usually std::move(x) is an xvalue, like in the following example:
+
+void do_something(vector<string>& v1)
+{
+    vector<string>& v2 = std::move(v1);
+}
+It both has an identity as we can refer to it as v1 and we allowed it to be moved (std::move). It’s still really unclear in my opinion, real headcracker I might investigate later.
+
+But below statement is very important and very true:
+
+For practical programming, thinking in terms of rvalue and lvalue is usually sufficient. Note that every expression is either an lvalue or an rvalue, but not both.
+
+The C++ Programming Language
+Reference Geek-Out
+If you take a reference to a reference to a type, do you get a reference to that type or a reference to a reference to a type? And what kind of reference, lvalue or rvalue? And what about a reference to a reference to a reference to a type?
+
+using rr_i = int&&;		// rvalue reference
+using lr_i = int&;		// lvalue reference
+
+using rr_rr_i = rr_i&&;  // int&&&& is an int&&
+using lr_rr_i = rr_i&;   // int&&& is an int&
+using rr_lr_i = lr_i&&;  // int&&& is an int&
+using lr_lr_i = lr_i&;   // int&& is an int&
+Meaning the rule is simple - lvalue always wins!. This is also known as reference collapse.
+
+What is int*&? It’s a reference to a pointer.
