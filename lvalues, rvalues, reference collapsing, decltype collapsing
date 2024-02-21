@@ -336,3 +336,105 @@ The same goes for using a prvalue.
 
 std::forward
 std::forward itself uses reference collapsing rules in a similar way, so as to pass incoming rvalue references as xvalues (function return values that are Type&& are xvalues) and incoming lvalue references as lvalues (returning Type&).
+
+
+expression decltype value category
+non-reference T prvalue
+lvalue reference T& lvalue
+rvalue reference T&& xvalue
+
+Compilers try to defer “materializing” prvalues as long as possible to avoid unnecessary
+moves and copies, particularly when handling function return values. A prvalue
+must eventually be materialized even if its value is discarded, however, so deferring
+materialization can elide only copy and move constructors, not other constructors.
+• A glvalue is an actual object in your program, constructed with a constructor call if
+its type is not trivially constructible. (The constructor doesn’t have to have returned
+yet.) The specification says a glvalue’s “evaluation determines the identity of an object,
+bit field, or function.” This means you can generally take a glvalue’s address (except
+bitfields). You can also assign to a non-const glvalue unless it is a function or a
+user-defined class with a deleted or inaccessible operator=.
+• An xvalue (“expiring glvalue”) is a glvalue whose value will soon not matter, for
+instance because it is a temporary object about to be destroyed at the end of the
+current full-expression. Xvalues are what make move construction possible: if you no
+longer care about the contents of an expiring object, you can often move its contents
+into another object much more efficiently than if you needed to preserve the expiring
+object’s value. As you might expect, std::move transforms its argument into an xvalue.
+• An lvalue is just a glvalue that is not an xvalue. The archetypal lvalue expression is
+a variable, but things that behave like variables are lvalues, too, such as class data
+members and function calls returning lvalue references.
+• An rvalue is just a prvalue or xvalue.
+
+
+When you use decltype(expression) to get a type, the following rules are applicable:
+If expression is an unparenthesized id-expression or class member, decltype(expression) is the type of the entity named by expression. If there is no such entity, or if expression names a set of overloaded functions, the program is ill formed.
+Otherwise, if expression is an xvalue, decltype(expression) is T&&, where T is the type of expression.
+Otherwise, if expression is an lvalue, decltype(expression) is T&, where T is the type of expression.
+Otherwise, decltype(expression) is the type of expression.
+The following example illustrates how these rules are used:
+const int* g(){
+    return new int[0];
+}
+
+int&& fun(){
+   int&& var = 1;
+   return 1;
+}
+
+struct A{
+    double x;
+};
+
+template <class T> T tf(const T& t){
+    return t;
+}
+
+bool f(){
+    return false;
+}
+
+struct str1{
+    template <typename T, typename U>
+    static decltype((*(T*)0) * (*(U*)0)) mult(const U& arg1, const T& arg2){
+       return arg1 * arg2;
+    }
+};
+
+template <typename T, typename U>  struct str2{
+    typedef decltype((*(T*)0) + (*(U*)0)) btype;
+    static btype g(T t, U u);
+};
+
+int main(){
+    int i = 4;
+    const int j = 6;
+    const int& k = i;
+    int&& m = 1;
+    int a[5];
+    int *p;
+
+    decltype(i) var1;            // int 
+    decltype(1) var2;            // int 
+    decltype(2+3) var3;          // int(+ operator returns an rvalue) 
+    decltype(i=1) var4 = i;      // int&, because assignment to int 
+                                 // returns an lvalue 
+    decltype((i)) var5 = i;      // int& 
+    decltype(j) var6 = 1;        // const int 
+    decltype(k) var7 = j;        // const int& 
+    decltype("decltype") var8 = "decltype";     // const char(&)[9]
+    decltype(a) var9;            // int[5] 
+    decltype(a[3]) var10 = i;    // int&([] returns an lvalue)
+    decltype(*p)  var11 = i;     // int&(*operator returns an lvalue)
+    decltype(fun()) var12 = 1;   // int&&
+    decltype(tf(A())) var13;     // A 
+    decltype(f()) var14;         // bool  
+    decltype((f())) var15;       // bool, parentheses around f() are ignored
+    decltype(f)  var16;          // bool() 
+    decltype(&f) var17;          // bool(*)() 
+    decltype(&A::x) var18;       // double A::* 
+    decltype(str1::mult(3.0, 4u))  var19;           // double 
+    decltype(str2<float, short>::g(1,3)) var20;     // float 
+    decltype(m) var21 = 1;       // int&&
+    decltype((m)) var22 = m;     // int&     
+    return 0;
+}
+
