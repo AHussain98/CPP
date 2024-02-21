@@ -74,7 +74,7 @@ template <typename T>
 class wrapper
 {
 public:
-	wrapper(T const v) : value(v){}  // parameterised constructor
+	wrapper(T const v) : value(v) {}  // parameterised constructor
 	const T& get() const { return value; }
 private:
 	T value;
@@ -119,7 +119,7 @@ public:
 
 	const T& get() const { return value; }
 
-    template <typename U>
+	template <typename U>
 	U as() const {
 		return static_cast<U = int>(value);  // default type is int
 	} // cast value from T to U
@@ -145,13 +145,13 @@ private:
 
 // examples of non-type template parameters:
 template <int V>  // integral type used
-class foo{};
+class foo {};
 
 template <int V = 42>  // default value used, non-type template parameter
-class foo{};
+class foo {};
 
 template<int... V>  // parameter pack
-class foo{};
+class foo {};
 
 // fixed size array class
 template<typename T, size_t S>
@@ -224,7 +224,7 @@ w2->output();
 // w1 and w2 are two unique ptr objects pointing to two different instances of the smart_device class
 
 // lets try this again with pointer to member function
-template <typename Command, void (Command::*action)() >
+template <typename Command, void (Command::* action)() >
 struct smart_device : device
 {
 	smart_device(Command& command) : cmd(command) {}
@@ -282,16 +282,189 @@ foo<"42"> f3;  // can now work
 // the last category of template parameter is templates themselves
 // as of cpp 17, both the class and typename keywords can be used to introduce a template template parameter
 
+template <typename T>
+class simple_wrapper
+{
+public:
+	T value;
+};
+
+template <typename T>
+class fancy_wrapper
+{
+public:
+	fancy_wrapper(T const v) : value(v)
+	{
+
+	}
+
+	const T& get() const { return value; }
+
+	template<typename U>
+	U as() const
+	{
+		return static_cast<U> (value);
+	}
+
+private:
+	T value;
+};
+
+
+// the simple wrapper class is a class template to hold a value of type T
+// fancy wrapper hides the wrapped value and provides member functions for accessing the value
+// next we can implementa class template called wrapping pair that contains two values of a wrapping type
+
+template<typename T, typename U, template<typename> typename W = fancy_wrapper>  // third argument is how to define a template template parameter
+class wrapping_pair
+{
+public:
+	wrapping_pair(const T a, const U b) : item1(a), item2(b) {}
+	
+	W<T> item1;
+	W<U> item2
+};
+
+// wrapping pair class template has 3 parameters, T and U are type template parameters, W is a template template parameter that has a default value which is the fancy wrapper type
+
+wrapping_pair<int, double> pair1(1,1.5);  // create object with default W type, fancy wrapper, item1 and item2 are fancy_wrappers
+wrapping_pair<int, double, simple_wrapper> pair2(5, 5.6);  // create a wrapper around two simple wrapper objects
+
+// default template arguments are specififed similarly to default function argumenrs, in the parameter list after the = sign
+// they can't be used with parameter packs
+// a template parameter with a default argument cannot be followed with a non default argument when defining a class template. This restriction does not apply with functions
+template <typename T = int, typename U>
+class bar { };   // error
+template <typename T = int, typename U>
+void func() {}   // OK
+
+// a template may have multiple declartions but only one definition
+// the default template arguments from all the declerations and the definition are merged, this is also done for default function arguments
+
+template<typename T, typename U = int>
+void foo();
+template<template T = int, typename U>
+void foo();
+
+// this is symantically the same as declaring foo with the template <T = int, U = int> 
+// Another restriction on default template arguments is that the same template parameter cannot be given multiple defaults in the same scope.
+// so we cannot give T the same default in two declerations in the same scope, otherwise an error is thrown
+
+// when a default template argument uses names from a class, the member access restrictions are checked at the decleration, not at the instantiation of the template
 
 
 
+// instantiation
+// templates are only blueprints from which the compiler creates actual code when it encounters their use
+// the act of creating a definition for a function, a class, or a variable from the template decleration is called template instantiation
+// templates can be instantiated implicitly or explicitly
+
+// implicit instantiation occurs when the compiler generates definitions based on the use of templates and when no explicit instantiation is present
+template<typename T>
+struct foo
+{
+	void f();
+};
+
+foo<int> foo1;  // define a variable of type foo<int> but don't use any members
+// because it encounters a foo with type int, the compiler implicitly instantiates a specialisation of foo for the int type
+// because f() is delcared but not defined, the compiler may or may not define it as void f() {} in compiled code
+// some compilers will ignore parts of the template that are not used, so VC++ for example will not compile the f() function at all
+// other compilers will create empty functions and will check that the function decleration is semantically valid before instantiating
+
+// For function templates, implicit instantiation occurs when the user code refers to a function in a context that requires its definition to exist, such as calling the function
+
+// For class templates, implicit instantiaion occurs when the user code refers to a template in a context when a complete type is required or when completeness of the type affects the code
+// one example is an object being constructed 
+// this is not the case when declaring pointers to a class template however
+
+foo<int> foo2;  // implicit instantiation of foo with int must be done here, as we have created an object
+foo<double> * footPtr;  // pointer to foo<double> instance, this does not instantiate the foo<double> type, as pointer is not pointing to an instance as yet
+
+// if we were to call fooPtr->f(), then the compiler would have to create an instance of foo<double> and also create its foo<double>::f() function
+
+// however, if you are converting a pointer, the compiler will implicitly instantiate the class you were converting from.
+
+/*
+template <typename T>
+struct control
+{};
+template <typename T>
+struct button : public control<T>
+{};
+void show(button<int>* ptr)
+{
+   control<int>* c = ptr;
+}
+In the function show, a conversion between button<int>* and control<int>*
+takes place. Therefore, at this point, the compiler must instantiate button<int>.
+
+*/
+
+// when a class template contains static members, these members are not implicitly instantiated when the compiler implicitly instantiates the class template, only when the compiler needs their definition
+// every specialisation of the class has its own version of the static data
+
+// explicit instantiation is where we explicitly tell the compiler to instantiate a class template or a function template, this can be definition and decleration
+// an explicit instantiation definition may appear anywhere in the program but after the definition of the template it refers to
+
+/*
+• The syntax for class templates is as follows:
+template class-key template-name <argument-list>  // class key can be class, union or struct
+
+• The syntax for function templates is as follows:
+template return-type name<argument-list>(parameter-list);
+template return-type name(parameter-list)*/
+
+// for both class and function templates, an explicit instantiation definition with a given argument list can only be given once on the entire program
+
+namespace ns
+{
+	template<typename T>
+	struct wrapper {
+		T value;
+	};
+
+	template struct wrapper<int>;   // explicily instantiate the integer version of wrapper
+}
+
+template struct ns::wrapper<double>;  // explicitly instantiate the double version of wrapper
+
+// explicit instantiation must appear in the same namespace as the template it refers to, or otherwise the name must be fully qualified. Both of these are therefore legal.
+
+// function explicit instantiation definition
+
+namespace ns {
+	template<typename T>
+	T add(T const a, T const b)
+	{
+		return a + b;
+	}
+
+	template int add(int, int);  // explicit instantiation of the int type
+}
+template double ns::add(double, double);  // explicit instantiation of the double type
 
 
+// If the explicit instantiation definition is not in the same namespace as the template, the name must be fully qualified.
+// The use of a using statement does not make the name visible in the current namespace.
 
+// When class members are used for return types or parameter types, member access specification is ignored in explicit instantiation definitions.
+// this is unlike default template arguments, which cannot bypass private or protected access 
 
+// explicit instantiation can be useful in libraries, where we want every type to be created and shared, even those the compiler may not create implicitly
 
+// explicit instantiation decleration
+// this is the way you can tell the compiler that the definition of a template instantiation is found in a different translation unit and that a new definition should not be generated
+// syntax is the same as explicit instantitation definition, but with the word extern in front
 
+/*
+When you do explicit template declarations, keep in mind that a class member function
+that is defined within the body of the class is always considered inline and therefore it
+will always be instantiated. Therefore, you can only use the extern keyword for member
+functions that are defined outside of the class body.
+*/
 
+// template specialisation
 
 
 
@@ -306,11 +479,12 @@ int main()
 	hello_command cmd;
 
 
-	auto w3 = std::make_unique<smart_device<hello_command, &hello_command::say_hello_in_english>>(cmd);
-	w3->output();
+	//auto w3 = std::make_unique<smart_device<hello_command, &hello_command::say_hello_in_english>>(cmd);
+	//w3->output();
 
-	auto w4 = std::make_unique<smart_device<hello_command, &hello_command::say_hello_in_spanish>>(cmd);
-	w4->output();
+	//auto w4 = std::make_unique<smart_device<hello_command, &hello_command::say_hello_in_spanish>>(cmd);
+	//w4->output();
+
+	std::cout << pair1.item1.as<double>();
 }
-
 
