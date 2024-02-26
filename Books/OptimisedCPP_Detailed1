@@ -1,0 +1,168 @@
+# include <iostream>
+# include <thread>
+# include <vector>
+# include <string>
+# include <mutex>
+# include <list>
+# include <algorithm>
+# include <stack>
+# include <memory>
+# include <set>
+
+class Team {
+public:
+	Team(std::string leader) : leader_(leader) {}
+	auto& leader() const { return leader_; }  // const version of the leader function, auto will be const string&
+	auto& leader() { return leader_; }  // normal version of the leader function, returns an object that may be mutates, auto is string&
+private:
+	std::string leader_;
+};
+
+// C++ programmers should leave memory handluing to containers and smart pointers, and not rely on manual memory handling
+// std::shared_ptr is a smart pointer based on a reference counting algorithm that will leak memory if objects have cyclic dependencies
+// minimising shared ownership makes the resultant code easier to use
+
+// destruction of objects is deterministic in C++, we can know exactly when an object is being destroyed
+
+// internally, a reference is a pointer that is not allowed to be null or repointed, therefore no copying is involved when passing it to a function
+
+class bagel {
+public:
+	bagel(std::set<std::string> ts) : toppings_(ts) {}  // set copied into class
+private:
+	std::set<std::string> toppings_;
+};
+
+
+// arguments passed as references indicate that null values are not allowed
+auto get_volume(const int rad)
+{
+	auto cube = std::pow(rad, 3.f);  // f makes it clear to compiler its a float and not a double
+	auto pi = 3.14f;
+	return (pi * 4.f / 3.f) * cube;
+}
+
+auto get_volume2(const int* rad)  // arguments passed by pointer can be checked to see if they're null
+{
+	auto s = rad ? *rad : 0 ;  // dereference is on the left
+	auto cube = std::pow(s, 3);
+	auto pi = 3.14f;
+	return (pi * 4.f / 3.f) * cube;
+}
+
+
+// essential c++ techniques
+
+// use auto often, improves readability
+// remember that auto can include const aswell
+
+// decltype(auto) can be used when we don't know the return type of a generic function
+
+// use auto for local variables
+auto i = 0;
+// auto z = std::mutex{};
+
+// c++17 introduced guaranteed copy elision, so auto x = foo{} is the same as foo x{}, there's no copying of a temporary object anymore
+// auto is also useful because uninitialised auto variables cannot compile
+
+/*
+// all return ints
+auto val() const // a) auto, deduced type
+auto val() const -> int // b) auto, trailing type
+int val() const // c) explicit type
+
+// all return const int&
+auto& cref() const // a) auto, deduced type
+auto cref() const -> const int& // b) auto, trailing type
+const int& cref() const // c) explicit type
+
+// all return int&
+auto& mref() // a) auto, deduced type
+auto mref() -> int& // b) auto, trailing type
+int& mref() // c) explicit type
+*/
+
+
+// a const reference, denoted by const auto&, has the ability to bind to anything. The original object cannot be mutated through such a reference
+// const reference should be the default choice for objects that are potentially expensive to copy
+// if the const reference is bound to a temporary object, the temporary object's lifetime will match the reference
+
+void some_func(const std::string& a, const std::string& b)
+{
+	const auto& str = a + b;  // str will go out of scope at end of function, temporary object returned by a + b will be destroyed
+}
+
+// better to be explicit, use const auto& to denote a constant reference and use auto& to denote a mutable reference, which should only be used when you want to change an object
+
+// auto&& or T&& is a forwarding referemce, also called a universial reference, it can bind to anything
+/* It's important to note that auto&& and T&& are only forwarding 
+references if used in a function template where T is a template 
+parameter of that function template. Using the && syntax with 
+an explicit type, for example std::string&&, denotes an rvalue
+reference and does not have the properties of a forwarding reference */
+
+// by using the keyword const, we can inform the compiler about which objects are immutable. The compiler can then check that we don't try to mutate objects that aren't intended to be changed
+// however, const initialised objects can still manipulate values that member functions point at
+
+class Foo {
+public:
+	Foo(int * ptr) : ptr_(ptr) {}
+	auto set_ptr_val(int v) const {
+		*ptr_ = v;  // compiles despite function being declared as const!
+	}
+private:
+	int* ptr_{};
+};
+
+// resource acquisition and the rule of 5
+
+
+
+int main()
+{
+
+	auto t = std::set<std::string>{};
+	t.insert("salt");
+
+	auto a = bagel(t);  // t is moved into a;
+
+	t.insert("pepper");
+	auto b = bagel(t);
+
+	t.insert("oregano");
+	for (auto& a : t) {
+		std::cout << a << std::endl;
+	}
+
+
+	auto i = 0;
+	const auto foo = Foo(&i);
+	foo.set_ptr_val(42);  // this works because the pointer itself is not changing, it remains const. Only the value it points to is changing.
+	// to prevent this, a wrapper called std::experimental::propagate_const has been added to the standard library which applies to pointers
+
+	// without move semantics, the advantages of value based semantics would be lost since we'd have to perform redundant deep cloning operations with high performance costs and error prone swap operations
+
+    // when copying an object handling a resource, a new resource needs to be allocated, and the resource from teh source object needs to be copied so that the two objects are completely seperated
+    // allocation and copying are slow, and in many cases, teh source object is not needed anymore. The compiler can detect cases like this and can instead perform a move operation
+
+    // with move semantics, the destintion object steals teh resource straight from the source object, and the source object is reset, its very similar to swapping except that the moved from object does not have to recieve the resources from the moved to object
+
+	std::vector<int>* a_v = new std::vector<int>{ 1,2,3,4,5 };
+
+	std::vector<int>* b_v = new std::vector<int>{ 5,6,7,8,9 };
+
+	std::swap(a_v, b_v);  // now a points to b's vector and b to a's
+
+	for (auto& i : *a_v) {
+		std::cout << i << "\n";
+	}
+
+	auto c = std::move(a_v);  // resources from a_v are moved into c, vector pointed to by c is move constructed
+	for (auto& i : *c) {
+		std::cout << i << "\n";
+	}
+
+	// a is now reset, it's still in a valid state, and can potentially be reset but its up to us to implement this in the objects move constructor
+	// moving objects only makes sense if the object owns a resource of some sort ( commonly heap allocated memory)
+	// if all data is contained within the object itself rather than heap memory, its more efficient to just copy it
+}
