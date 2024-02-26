@@ -44,7 +44,7 @@ auto get_volume(const int rad)
 
 auto get_volume2(const int* rad)  // arguments passed by pointer can be checked to see if they're null
 {
-	auto s = rad ? *rad : 0 ;  // dereference is on the left
+	auto s = rad ? *rad : 0;  // dereference is on the left
 	auto cube = std::pow(s, 3);
 	auto pi = 3.14f;
 	return (pi * 4.f / 3.f) * cube;
@@ -95,9 +95,9 @@ void some_func(const std::string& a, const std::string& b)
 // better to be explicit, use const auto& to denote a constant reference and use auto& to denote a mutable reference, which should only be used when you want to change an object
 
 // auto&& or T&& is a forwarding referemce, also called a universial reference, it can bind to anything
-/* It's important to note that auto&& and T&& are only forwarding 
-references if used in a function template where T is a template 
-parameter of that function template. Using the && syntax with 
+/* It's important to note that auto&& and T&& are only forwarding
+references if used in a function template where T is a template
+parameter of that function template. Using the && syntax with
 an explicit type, for example std::string&&, denotes an rvalue
 reference and does not have the properties of a forwarding reference */
 
@@ -106,7 +106,7 @@ reference and does not have the properties of a forwarding reference */
 
 class Foo {
 public:
-	Foo(int * ptr) : ptr_(ptr) {}
+	Foo(int* ptr) : ptr_(ptr) {}
 	auto set_ptr_val(int v) const {
 		*ptr_ = v;  // compiles despite function being declared as const!
 	}
@@ -115,6 +115,93 @@ private:
 };
 
 // resource acquisition and the rule of 5
+// one of the basic concepts in C++ is that a class should completely handle its resources
+// this means when a class is copied, moved, copy assigned or move assigned or destructed, the class should make sure its resources are handled accordingly
+// the necessity of implementing these 5 functions is called the rule of 5
+// how the rule of 5 can be implemented in a class handling an allocated resource:
+
+class Buffer {
+public:
+	Buffer(const std::initializer_list<float>& values) : size_{ values.size() } {
+		ptr_ = new float[values.size()];
+		std::copy(values.begin(), values.end(),ptr_);
+	}
+	auto begin() const { return ptr_; };
+	auto end() const { return ptr_ + size_; };
+private:
+	size_t size_{ 0 };
+	float* ptr_{ nullptr };
+};
+
+// in this class, the handled resource is a block of memory allocated in the constructor of the buffer class
+// copy constructor
+Buffer::Buffer(const Buffer& other) : size_(other.size_)
+{
+	ptr_ = new float[size_];
+	std::copy(other.ptr_, other.ptr_ + size_, ptr_);
+}
+
+// copy assignment
+Buffer& Buffer::operator=(const Buffer& other) {
+	delete[] ptr_;  // delete whatever ptr is currently pointing at
+	ptr_ = new float[other.size_];
+	size_ = other.size_;
+	std::copy(other.ptr_, other.ptr_ + other.size_, ptr_);
+	return *this;
+}
+
+// destructor
+Buffer::~Buffer()
+{
+	delete[] ptr_;  // it is still valid to delete a nullptr
+	ptr_ = nullptr;
+}
+
+// although a correct implementation of these three functions is all that is required for a class to handle its internal resources, there are two issues
+// 1. unnecessary copies, such as returning a Buffer from a function (the entire array would need to be copied)
+// 2. Resources that cannot be copied, what if we had a unique_ptr for example, or an std::thread
+
+// the solution is move semantics
+// in addition to the copy-constructor and copy-assignment operator, we can add a move-constructor and move-assignment operator
+// instead of taking const reference&, they must take rvalue references &&
+// the && modifier indicates the parameter is an object we intend to move from instead of copying
+// whereas the copy() function copies an object, the move equivalents move resources from one object to another, freeing the moved-from object from the resource
+
+// move assignment and move constructor functions can be marked as noexcept, they won't work if they're not
+// we can make these noexcept becaue they do not allocate memory or do something that may throw exceptions, unlike copy versions
+
+// move constructor
+Buffer::Buffer(Buffer&& other) noexcept : size_(other.size_), ptr_(other.ptr_)
+{
+	other.ptr_ = nullptr;
+	other.size_ = 0;
+}
+
+// move assignment
+Buffer& Buffer::operator=(Buffer&& other) noexcept {
+	ptr_ = other.ptr_;
+	size_ = other.size_;
+	other.ptr_ = nullptr;
+	other.size_ = 0;
+	return *this;
+}
+
+// now when the compiler detects that we perform what seems to be a copy, such as returning a Buffer from a function, but the copied form isnt used anymore, it will utilise the no-throw move-constructor / move-assignkment operator instead of copying
+// as the class has move semantics implemented explicitly, the compiler handles this automatically
+/* Do not forget to mark your move-constructors and move-assignment 
+operators as noexcept (unless they might throw an exception, of 
+course). Not marking them noexcept prevents standard library 
+containers and algorithms from utilizing them, instead resorting to 
+using a regular copy/assignment under certain conditions. */
+
+// the compiler is allowed to nove objects instead of copying when the object can be categorised as an rvalue.
+// an rvalue is an object that is not tied to a named variable, either because its coming straight out of a function or because its been made an rvalue by using std::move()
+
+// The object returned by make_buffer is not tied to a variable
+x = make_buffer(); // move-assigned
+// The variable "x" is passed into std::move()
+y = std::move(x); // move-assigned
+
 
 
 
@@ -142,10 +229,10 @@ int main()
 
 	// without move semantics, the advantages of value based semantics would be lost since we'd have to perform redundant deep cloning operations with high performance costs and error prone swap operations
 
-    // when copying an object handling a resource, a new resource needs to be allocated, and the resource from teh source object needs to be copied so that the two objects are completely seperated
-    // allocation and copying are slow, and in many cases, teh source object is not needed anymore. The compiler can detect cases like this and can instead perform a move operation
+	// when copying an object handling a resource, a new resource needs to be allocated, and the resource from teh source object needs to be copied so that the two objects are completely seperated
+	// allocation and copying are slow, and in many cases, teh source object is not needed anymore. The compiler can detect cases like this and can instead perform a move operation
 
-    // with move semantics, the destintion object steals teh resource straight from the source object, and the source object is reset, its very similar to swapping except that the moved from object does not have to recieve the resources from the moved to object
+	// with move semantics, the destintion object steals teh resource straight from the source object, and the source object is reset, its very similar to swapping except that the moved from object does not have to recieve the resources from the moved to object
 
 	std::vector<int>* a_v = new std::vector<int>{ 1,2,3,4,5 };
 
