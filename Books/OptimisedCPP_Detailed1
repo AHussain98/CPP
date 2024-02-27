@@ -57,6 +57,19 @@ auto get_volume2(const int* rad)  // arguments passed by pointer can be checked 
 // remember that auto can include const aswell
 
 // decltype(auto) can be used when we don't know the return type of a generic function
+// decltype(auto) is primarily useful for deducing the return type of forwarding functions and similar wrappers, where you want the type to exactly “track” some expression you’re invoking.
+/*
+For example, given the functions below:
+
+   string  lookup1();
+   string& lookup2();
+In C++11 we could write the following wrapper functions which remember to preserve the reference-ness of the return type:
+   string  look_up_a_string_1() { return lookup1(); }
+   string& look_up_a_string_2() { return lookup2(); }
+In C++14, we can automate that:
+   decltype(auto) look_up_a_string_1() { return lookup1(); }
+   decltype(auto) look_up_a_string_2() { return lookup2(); }
+*/
 
 // use auto for local variables
 auto i = 0;
