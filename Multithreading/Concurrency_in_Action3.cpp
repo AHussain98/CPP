@@ -5,6 +5,7 @@
 # include <chrono>
 # include <condition_variable>
 # include <queue>
+# include <memory>
 
 // synchronise concurrent operations
 // sometimes we don't need to just protect the data, we also need to synchrnoise actions on seperate threads
@@ -45,35 +46,142 @@ void wait_for_flag() {
 
 // waiting for data to process with std::condition_variable
 std::mutex mut;
-std::queue<data_chunk> data_queue;  // queue used to pass the data between the two threads
+std::queue<data_chunk> data_queue;  // queue thats used to pass the data between two threads
 std::condition_variable cond;
 
 void data_preperation_thread()
 {
 	while (more_data_to_prepare())
-	{
+	{ // when the data is ready, the thread preparing the data locks the mutex protecting the queue using std::lock_guard
 		data_chunk const data = prepare_data();
 		{
-			std::lock_guard<std::mutex> lk(mut);
+			std::lock_guard<std::mutex> lk(mut);  // code to push the data in the queue is in a smaller scope, so you notify the condition variable after unlocking the mutex, this is so that if the waiting thread wakes immediately, it doesnt have to block again, waiting for you to unlock the mutex
 			data_queue.push(data);
 		}
-		cond.notify_one();
+		cond.notify_one();  // it then calls the notify_one() member fucntion of the condition variable to notify the waiting thread (if there is one)
 	}
 }
+// on the other side of the fence, you have the processing thread
 
 void data_processing_thread()
 {
 	while (true)
 	{
-		std::unique_lock<std::mutex> lk(mut);
-		cond.wait(lk, [] {return !data_queue.empty(); });
+		std::unique_lock<std::mutex> lk(mut);  // this thread first locks the mutex with a unique lock rather than a lock_guard
+		cond.wait(lk, [] {return !data_queue.empty(); });  // wait is called on the condition variable with the speific condition being waited for in the lambda
+		// the lambda checks to see if the data queue is empty or not, the wait function returns if the condition is true
+		// if the condition is not satisfied, the lamda function returns false and wait() unlocks the mutex and puts the thread in a blocked or waiting state
+		// when the condition variable is notofied by the call to notify_one() in the preperation_thread() fucntion, the thread wakes from its slumber (is unblocked), reacquires the lock on the mutex and and checks the condition again, returning from wait() with the mutex still locked if the condition is true
+		// if the condition has not been satisfied, the thread unlocks the mutex and resumes waiting
+		// this is why we need std::unique_lock rather than lock_guard, the waiting thread must unlock the mutex while its waiting and lock it again afterwards, and lock_guard doesn't have that much flexibility
+		// if the mutex remained locked while the thread was sleeping, we wouldnt be able to access the queue to add data, which would mean the condition would never be satisfied
+		// during a call to wait(), the condition variable may check the supplied condition any number fo times, and it will always do so with the mutex locked and will return immediately only if the function provided to the mutex returns true
+		// when the waiting thread reacquires the mutex and checks the condition, if this isnt in direct response to a notify() call in another thread,it's called a spurious wake
+		// because this check can happen an indeterminate number of times, itrs important that your condition check function not have any side effects, as they too will occur each time
 		data_chink data = data_queue.front();
 		data_queue.pop();
 		lk.unlock();
-		process(data);
+		process(data);  // unique lock is used because we can unlock before we start processing data, which we only want to do once we don't have the lock, so it can be acquired by any other threads
+		// mutexes should not be held onto longer than necessary
 		if (is_last_chunk(data)) break;
 	}
 }
+
+// condition_variable::wait is an optimisation over a busy-wait
+// using a queue to transfer data between threads is a common scenario, the synchronisation can be limited to the queue itself, which greatly reduces the number of possible synchronization problems and race conditions
+
+// building a thread safe queue with condition variables
+// query the whole of the whole queue (empty() and size()), query the elements of the queue (front() and back()) and thise that modify the queue (push), pop() and emplace())
+// same considerations of race conditions inherent in the stack
+// combine front() and pop() into a single function call, same as when we combines top() and pop() for the stack
+// when using a queue to pass data between threads, the recieveing thread often needs ti wait for the data. Lets provide two variants on pop, try_pop() which tries to pop the value from the queue but always returns immediately with an indication of failure even if there wasnt a value to retrieve
+// and wait_and_pop() which waits until there's a value to retrieve
+
+// contain the mutex and condition variable in the threadsafe_queue instance, so that seperate variables are no longer required and no external synchronisatin is required for the call to push()
+// wait_and_pop() can take care of the condition variable wait
+
+template <typename T>
+class threadsafe_queue
+{
+private:
+	mutable std::mutex mut;  // make this mutable
+	std::queue<T> data_queue;
+	std::condition_variable cond;
+
+public:
+	threadsafe_queue(){};
+	threadsafe_queue& operator=(const threadsafe_queue& other) = delete;   // we want this non assignable for simplicity
+	threadsafe_queue(const threadsafe_queue& other)
+	{
+		std::lock_guard<std::mutex> lk(other.mut);  // lock the other mutex, this is why mutex must be mutable in order to violate const
+		data_queue = other.data_queue;
+	}
+	void push(T value)
+	{
+		std::lock_guard<std::mutex> lk(mut);
+		data_queue.push(value);
+		cond.notify_one();  // notify any thread waiting for the queue to not be empty
+	}
+	void wait_and_pop(T& value)
+	{
+		std::unique_lock<std::mutex> lk(mut); // lock here
+		cond.wait(lk, [this]() {return !data_queue.empty(); });  // why pass this?
+		value = data_queue.front();
+		data_queue.pop();
+	}
+	std::shared_ptr<T> wait_and_pop() {  // overloaded 
+		std::unique_lock<std::mutex> lk(mut);
+		cond.wait(lk, [this]() {return !data_queue.empty(); });
+		std::shared_ptr<T> res(std::make_shared<T>(data_queue.front()));
+		data_queue.pop();
+		return res;  // return a shared pointer to the front element
+	}
+	bool try_pop(T& value)  // no waiting
+	{
+		std::lock_guard<std::mutex> lk(mut);
+		if (data_queue.empty()) return false;
+		value = data_queue.front();
+		data_queue.pop();
+		return true;
+	}
+	std::shared_ptr<T> try_pop()  // overload, no waiting
+	{
+		std::lock_guard<std::mutex> lk(mut);
+		if (data_queue.empty()) return std::shared_ptr<T>();  // return empty shared pointer
+		std::shared_ptr<T> res(std::make_shared<T>(data_queue.front()));  // create shared pointer to front element
+		data_queue.pop();
+		return res;
+	}
+	bool empty() const
+	{
+		std::lock_guard<std::mutex> lk(mut);  // mutex locked as its mutable, even though function is const
+		return data_queue.empty();
+	}
+
+};
+
+// although empty() is a const member function, and the other parameter in the copy constructor is const reference, other threads may have non-const references to the object, and may be calling mutating member functions so you still need to lock the mutex
+// since locking a mutex is a mutating operation, the mutex object must be marked mutable so that it can be locked in empty() and in the constructor
+// condition variables are useful when there's more than one thread waiting for the same event
+// notify_one() will trigger one of te threads currenctly executing wait() to check its condition and return from wait() (because you've just added an item to the queue)
+// there's no guarantee of which thread will be notified or even if there's a thread to be notified at all, all the processing threads may still be procesing data
+// another possibility is that several threads are waiting for the same event and all of them need to respond. This can happen where shared data is being initialised and the processing threads can all use the same data but need to wait for it to be initialised
+// or where the threads need to wait for a periodic update to shared data
+// in these cases, the thread preparing teh data can call notify_all() on the condition variable. This causes all the threads currently executing wait() to check the cindition they're waiting for.
+
+// if the waiting thread is only going to wait once, where the condition becomes true means it will never wait again, a condition variable may not be the best choice of synchronisation mechanism
+// this is particularly true if the event being waited for is availability of a specific piece of data
+// in this scenario, a future may be more appropriate
+
+
+
+
+
+
+
+
+
+
 
 
 
