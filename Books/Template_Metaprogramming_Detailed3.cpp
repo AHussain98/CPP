@@ -12,7 +12,7 @@ T min(T a, T b)  // function template with two parameters that returns the minim
 {
 	return a < b ? a : b;
 }
- //and now an overload for the min function
+//and now an overload for the min function
 template <typename T, typename... Args>  // ellipsis used here to specify a pack of parameters function template with variable number of arguments
 T min(T a, Args... args)  // pack of parameters specified in the function parameter list
 {
@@ -48,7 +48,7 @@ Notice that sizeof…(args) (the function parameter pack) and sizeof…(Args) (t
 template parameter pack) return the same value. On the other hand, sizeof…(args)
 and sizeof(args)... are not the same thing. The former is the sizeof operator
 used on the parameter pack args. The latter is an expansion of the parameter pack args
-on the sizeof operator. 
+on the sizeof operator.
 
 sizeof...(args) tells how many elements in the param pack
 sizeof(args)... gives sizeof(arg1), sizeof(arg2) etc for every param in the pack
@@ -100,7 +100,7 @@ struct outer
 
 // template argument list
 template <typename... T>
-struct tag{};
+struct tag {};
 
 template<typename T, typename U, typename... Args>
 void tagger()
@@ -113,7 +113,7 @@ void tagger()
 
 // function parameter list, specifying parameters for a function template
 template <typename... Args>
-void make_it(Args... args)  // unpack the parameter pack
+void make_it(Args... args)  // pack of parameters specified in the function args
 {
 	std::cout << "There were " << sizeof...(args) << " arguments! \n";
 }
@@ -134,7 +134,7 @@ void do_sums(T... args)
 {
 	auto s1 = sum(args...);  // sum 1,2,3,4
 	auto s2 = sum(42, args...);  // sum(42,1,2,3,4)
-	auto s3 = sum(step_it(args)...);  // sum(step_it(1),step_it(2),....
+	auto s3 = sum(step_it(args)...);  // sum(step_it(1),step_it(2),...., here since step_it() is to the left of the ellipsis, this si what is expanded
 	std::cout << s1 << " " << s2 << " " << s3;
 }
 
@@ -183,11 +183,12 @@ void captures(T... args)
 int main()
 {
 	std::cout << min<double>(14.5, 9.0) << std::endl;
-	std::cout << min<int,int,int,int,int>(1, 2, 4, 6, -19, 0) << std::endl;  // compile time auto deduction, dont need to use templated function call
+	std::cout << min<int, int, int, int, int>(1, 2, 4, 6, -19, 0) << std::endl;  // compile time auto deduction, dont need to use templated function call
 
-	multipacks<int>(1, 2, 3, 4, 5);  //1,4, compiler deduces the first int is in specified parameter pack, result must be in second
+	multipacks<int>(1, 2, 3, 4, 5);  //1,4, compiler deduces the first int is in specified parameter pack, rest must be in second
 	multipacks<int, int, int, int, int>(1, 2, 3, 4, 5);  //5,0, 5 ints clearly given in templateed function call therefore other pack is zero
 	multipacks<int, double>(1, 2, 3.3, 4.4, 5.5);//2,3, defferent types so compiler can use that to work out which is which
+	multipacks(1, 2.2f, 3.14);  // 0,3 compiler assumes all aere part of second parameter pack
 
 	func_pair<bool(int, int), double(int, int, double)> funcs{ twice_as, sum_and_div }; // create the object and bind the member functions to these two
 
@@ -195,7 +196,7 @@ int main()
 	std::cout << funcs.G(42, 12, 10.0) << '\n';
 	make_it(1, 2, 'd');
 
-	do_sums(1, 2, 3, 4 );
+	do_sums(1, 2, 3, 4);
 	parenthesized(1, 2, 3, 4, 5);
 
 	A a;
