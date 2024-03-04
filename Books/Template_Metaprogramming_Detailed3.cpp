@@ -6,8 +6,9 @@
 // variadic templates are templates with a variable number of arguments
 // they use ... to specify a pack of arguments, which can have different syntax depending on its use
 
+// following example works using compile time recursion and function overloading for the base case
 template <typename T>
-T min(T a, T b)  // function template with two parameters that returns the minimum
+T min(T a, T b)  // function template with two parameters that returns the minimum, base case
 {
 	return a < b ? a : b;
 }
@@ -16,7 +17,7 @@ template <typename T, typename... Args>  // ellipsis used here to specify a pack
 T min(T a, Args... args)  // pack of parameters specified in the function parameter list
 {
 	return std::min(a, min(args...));  // expand the pack in the body of the function, function recursively calls itself with expansion of parameter pack
-	// the result of the expansion is a comma seperated list of zero or moee values
+	// the result of the expansion is a comma seperated list of zero or moee values, important note: comma seperated!!!!!
 }
 
 // variadic functions rely on overloaded functions
@@ -43,8 +44,8 @@ T sum(T a, Args... args)
 
 // so if the number of args in the pack is zero, just return the value, otherwise we add the first argument to the sum of the remaining ones
 /*
-Notice that sizeof…(args) (the function parameter pack) and sizeof…(Args) (the
-template parameter pack) return the same value. On the other hand, sizeof…(args)
+Notice that sizeofâ€¦(args) (the function parameter pack) and sizeofâ€¦(Args) (the
+template parameter pack) return the same value. On the other hand, sizeofâ€¦(args)
 and sizeof(args)... are not the same thing. The former is the sizeof operator
 used on the parameter pack args. The latter is an expansion of the parameter pack args
 on the sizeof operator. 
