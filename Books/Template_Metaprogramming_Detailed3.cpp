@@ -1,10 +1,15 @@
 # include <iostream>
 # include <functional>
 # include <array>
+# include <utility>
+# include <tuple>
+# include <vector>
 
 
 // variadic templates are templates with a variable number of arguments
 // they use ... to specify a pack of arguments, which can have different syntax depending on its use
+// 
+// IMPORTANT NOTE: template<typename... T> means that T can actually be of several different types!
 
 // following example works using compile time recursion and function overloading for the base case
 template <typename T>
@@ -140,20 +145,20 @@ void do_sums(T... args)
 
 
 // parenthesized initializers: when the expansion pack appers inside the parenthesis of a direct initializer, function sytle cas, member initialiser, new expression, the rules are the same as for the function argument lists
-template <typename... T>
+template <typename... T> // T is a list of types, this indicates that the function deals with a list of types
 struct sum_wrapper
 {
-	sum_wrapper(T... args)
+	sum_wrapper(T... args)  // capture the list of types T and refer to them as arg
 	{
-		value = (... + args);
+		value = (... + args);  // fold expression, unpack the args
 	}
-	std::common_type_t<T...> value;
+	std::common_type_t<T...> value;  // expand type T in template parameter list, std::common_type_t<T...> will expand to the equivalent of a comma seperated list of template arguments
 };
 
 template <typename... T>
 void parenthesized(T... args)
 {
-	std::array<std::common_type_t<T...>, sizeof...(T)> arr{ args... }; // std::array<int,4> {1,2,3,4}
+	std::array<std::common_type_t<T...>, sizeof...(T)> arr{ args... }; // std::array<int,4> {1,2,3,4}, args... is expanding the values of parameter pack args, which is the comma seperated list of arguments
 	sum_wrapper sw1(args...);  // value = 1 + 2 + 3 + 4
 	sum_wrapper sw2(++args...);  // value = 2 + 3 + 4 + 5
 }
@@ -179,15 +184,98 @@ void captures(T... args)
 }
 
 
+// brace enclosed initializers
+template <typename... T>
+void brace_enclosed(T... args)
+{
+	int arr1[sizeof...(args) + 1] = { args...,0 };  // compile time array created // arrg1{1,2,3,4,0}
+	int arr2[sizeof...(args)] = { step_it(args)... }; // arr2: {2,3,4,5}
+}
+
+
+// class templates may also have a varable number of template arguments, this is how we can build tuples and variants, which reside in the standard library
+// a tuple is a type that represents a fixed-size collection of heterogenous values, can store objects of multiple types
+// when implementing a variadic function template, we used a recursion pattern with two overloads, one for the general case and another for the base case
+// the same approach has to be taken with variadic class templates, except that we need to use specialisation for this purpose
+
+
+// primary template, two parameters, type template and parameter pack, so there must be atleast 1 type specified for instantiating this template
+template <typename T, typename... Ts>
+struct tuple  
+{
+	tuple(T const& t, const Ts&... ts) : value(t), rest(ts...){}  // rest takes in the expansion of the arguments, because its another tuple, the first argument will be T and the second will be a tuple with the remainder of the Ts arguments
+
+	constexpr int size() const { return 1 + rest.size(); }
+
+	T value;
+	tuple<Ts...> rest;  // expansion of the template type arguments, rest is another tuple
+	
+};
+
+template <typename T>  // tuple with a single element, partial specialisation, this is the base case
+struct tuple<T>
+{
+	tuple(const T& t) : value(t) {}
+	constexpr int size() const { return 1; }
+	T value;
+};
+
+/* The primary template tuple has two member variables: value, 
+of the T type, and rest, of type tuple<Ts…>. This is an expansion of the rest of the 
+template arguments. This means a tuple of N elements will contain the first element and 
+another tuple; this second tuple, in turn, contains the second element and yet another 
+tuple; this third nested tuple contains the rest. And this pattern continues until we end up 
+with a tuple with a single element. This is defined by the partial specialization tuple<T>. 
+Unlike the primary template, this specialization does not aggregate another tuple object. */
+
+
+// fold expressions
+// a fold expression is a expression imvolving a parameter pack that reduces 9or folds) the elements of the parameter pack over a binary operator
+
+template<typename... T>  // pack of types
+int sum_again(T... ts)   // pack of args
+{
+	return (... + ts);  // unary left fold, this does the operation on arg1 and arg2, then the result of thet with arg3, all the way to argN
+}
+
+// no need for overloaded functions anymore, the expression (... + args) represents the fold expression, which upon evaluation becomes ((((arg0 + arg1) + arg2) + … ) + argN)
+
+// unary fold expressions must have non empty expansions
+// binary fold expressions do not have this issue
+
+
+template<typename... T>
+int sum_from_zero(T... ts)
+{
+	return (0 + ... + ts);
+}
+
+
+// fold expression to insert multiple elements into a vector at once
+template<typename T, typename... Args>
+void push_back_many(std::vector<T>& v, Args... args)
+{
+	(v.push_back(args), ...);  // parenthesis are very important for fold expressions
+}
+
+/* The parameter pack args is used with the v.push_back(args) expression that 
+is folded over the comma operator. The unary left fold expression is (v.push_
+back(args), ...)  */
+
+
+
+
+
+
 
 int main()
 {
 	std::cout << min<double>(14.5, 9.0) << std::endl;
 	std::cout << min<int, int, int, int, int>(1, 2, 4, 6, -19, 0) << std::endl;  // compile time auto deduction, dont need to use templated function call
 
-	multipacks<int>(1, 2, 3, 4, 5);  //1,4, compiler deduces the first int is in specified parameter pack, rest must be in second
-	multipacks<int, int, int, int, int>(1, 2, 3, 4, 5);  //5,0, 5 ints clearly given in templateed function call therefore other pack is zero
-	multipacks<int, double>(1, 2, 3.3, 4.4, 5.5);//2,3, defferent types so compiler can use that to work out which is which
+	multipacks<int>(1, 2, 3, 4, 5);  // 1,4, compiler deduces the first int is in specified parameter pack, rest must be in second
+	multipacks<int, int, int, int, int>(1, 2, 3, 4, 5);  // 5,0, 5 ints clearly given in templateed function call therefore other pack is zero
+	multipacks<int, double>(1, 2, 3.3, 4.4, 5.5);// 2,3, defferent types so compiler can use that to work out which is which
 	multipacks(1, 2.2f, 3.14);  // 0,3 compiler assumes all aere part of second parameter pack
 
 	func_pair<bool(int, int), double(int, int, double)> funcs{ twice_as, sum_and_div }; // create the object and bind the member functions to these two
@@ -205,4 +293,22 @@ int main()
 	X x(a, b, c);
 	std::cout << std::endl;
 	captures(1, 2, 3, 4, 5);
+
+
+	// tuples have a member function called get which allows us to access elements within them
+
+	tuple<int> one(42);
+	tuple<int, double> two(42, 42.0);
+	tuple<int, double, char> three(42, 42.0, 'a');
+
+	//std::cout << get<0>(one) << std::endl;
+
+	std::cout << three.rest.rest.value << std::endl;  // real tuples have get function so we dont need to do this.The template arguments are the index and a parameter pack of the tuple types. 
+	sum_again(1, 2, 3, 4, 5); 
+	//sum_again();  // throws error
+	sum_from_zero(); // no error
+
+
+
+
 }
