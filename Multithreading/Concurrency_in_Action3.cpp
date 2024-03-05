@@ -6,6 +6,9 @@
 # include <condition_variable>
 # include <queue>
 # include <memory>
+# include <future>
+# include <string>
+
 
 // synchronise concurrent operations
 // sometimes we don't need to just protect the data, we also need to synchrnoise actions on seperate threads
@@ -45,6 +48,7 @@ void wait_for_flag() {
 // std::condition_variable is therefore lower cost
 
 // waiting for data to process with std::condition_variable
+/*
 std::mutex mut;
 std::queue<data_chunk> data_queue;  // queue thats used to pass the data between two threads
 std::condition_variable cond;
@@ -160,6 +164,9 @@ public:
 
 };
 
+*/
+
+
 // although empty() is a const member function, and the other parameter in the copy constructor is const reference, other threads may have non-const references to the object, and may be calling mutating member functions so you still need to lock the mutex
 // since locking a mutex is a mutating operation, the mutex object must be marked mutable so that it can be locked in empty() and in the constructor
 // condition variables are useful when there's more than one thread waiting for the same event
@@ -173,22 +180,95 @@ public:
 // this is particularly true if the event being waited for is availability of a specific piece of data
 // in this scenario, a future may be more appropriate
 
+// if a thread needs to wait for a specific one off event, it somehow obtains a future representing that event
+// the thread can then periodically wait on the future for short periods of time to see if the event has occured while performing some other task between checks
+// alternatively it can do another task until it needs the event to have happened before it can proceed and then just waits for the future to become ready
+// the future cant be reset after it happens
 
+// two sorts of futures, unique futures std::future<> and shared features std::shared_future<>
+// these are based on unique and shared pointers
+/* an instance of std::future is the one and only instance that refers to its associated event
+* multiple instances of shared_future can refer to the same event, all the instances will become ready at the same time and they may all access any data associated with the event
+* the template parameter is the type of the associated data
+* futures are used to communicate between threads, but if multiple threads need to access a single future object, they must still use a mutex or synchronisation mechanism
+* multiple threads nay each access their own copy of shared_future, even if they all refer to the same asynchronous result
+* 
+* 
 
+futures are useful for returning values from threads
 
+std::async starts an asynchrounous task for which we dont need the result right now, pass it a callable 
+std::async returns a std::future object, which will eventually hold the return value of the function
+When you need the value, you can call get() on the future and the thread blocks until the future is ready and then returns the value
 
+*/
 
+int find_the_answer();
 
+void do_other_stuff();
 
+// std::async allows you to pass additional arguments to the function by adding extra arguments to the call
+// if arguments are rvalues, they are moved into the async. This allows move only types to be used for both the function object and the argument
+// can give async a pointer to a member function then next param is the object to call it on, then functiojn params
+struct X
+{
+	void foo(int i, const std::string& s);
+	std::string bar(const std::string& s);
+};
 
+struct Y
+{
+	double operator() (double d);
+};
 
+/* If the first argument is
+a pointer to a member function, the second argument provides the object on which to
+apply the member function (either directly, or via a pointer, or wrapped in std::ref),
+and the remaining arguments are passed as arguments to the member function*/
+
+X bax(X&);  
+
+class move_only
+{
+public:
+	move_only();
+	move_only(move_only&&);
+	move_only& operator=(move_only&&);
+	move_only & operator=(move_only const&) = delete;
+	void operator()();
+};
+
+// by default, its up to the implementation whether std::async starts a new thread or whether the task runs synchronously when the future is waited for
+// we can specify which to use with an additional parameter to std::async before the function to call
+/*  This parameter is of the type std::launch,
+and can either be std::launch::deferred to indicate that the function call is to be
+deferred until either wait() or get() is called on the future, std::launch::async to
+indicate that the function must be run on its own thread, 
+or std::launch::deferred | std::launch::async to indicate that the implementation may choose*/
 
 
 
 int main()
 {
+	std::future<int> the_answer = std::async(find_the_answer);  // using std::future to get the returned result of asynchronous task
+	do_other_stuff();
+	std::cout << the_answer.get() << std::endl;  // get the returned value from the asynchronous task
 
+	X x;
+	auto f1 = std::async(&X::foo, &x, 42, "hello");  // callable, object to call it on, then parameters. so foo(42,"hello") is called on x
+	auto f2 = std::async(&X::bar, x, "goodbye"); // // calls bar("goodbye") on a copy of x
 
+	auto f3 = std::async(Y(), 3.1415);  // calls Y(3.1415) where Y in async is move constucted
+	Y y;
+	auto f4 = std::async(std::ref(y), 3.1415);  // calls y(3.1415)
 
+	auto f5 = std::async(bax, std::ref(x));  // calls bax(x)
+
+	auto f6 = std::async(move_only());  // calls tmo() where tmp is constructed from std::move(move_only())
 
 }
+
+
+
+
+
