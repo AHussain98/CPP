@@ -8,6 +8,9 @@
 # include <memory>
 # include <future>
 # include <string>
+# include <deque>
+# include <utility>
+
 
 
 // synchronise concurrent operations
@@ -191,7 +194,7 @@ public:
 * multiple instances of shared_future can refer to the same event, all the instances will become ready at the same time and they may all access any data associated with the event
 * the template parameter is the type of the associated data
 * futures are used to communicate between threads, but if multiple threads need to access a single future object, they must still use a mutex or synchronisation mechanism
-* multiple threads nay each access their own copy of shared_future, even if they all refer to the same asynchronous result
+* multiple threads may each access their own copy of shared_future, even if they all refer to the same asynchronous result
 * 
 * 
 
@@ -200,6 +203,8 @@ futures are useful for returning values from threads
 std::async starts an asynchrounous task for which we dont need the result right now, pass it a callable 
 std::async returns a std::future object, which will eventually hold the return value of the function
 When you need the value, you can call get() on the future and the thread blocks until the future is ready and then returns the value
+get() can only be called ONCE on the future object! Only one thread can retireve the std::future value because after the first call to get(), there's no value left to retrieve
+
 
 */
 
@@ -245,6 +250,105 @@ and can either be std::launch::deferred to indicate that the function call is to
 deferred until either wait() or get() is called on the future, std::launch::async to
 indicate that the function must be run on its own thread, 
 or std::launch::deferred | std::launch::async to indicate that the implementation may choose*/
+// this last option is the default. If the function is called, it may never run
+
+
+
+
+// an std::future can be associated with a task by wrapping it in an instance of std::packaged_task<> or writing code to explicitly set the values using std::promise
+// packaged_task<> ties a future to a function or callable object, when it is invoked, it calls the associated function or callable object and makes the future ready, with the return value stored as the associated data
+// template parameter for the std::packaged_task<> class template is a fucntion signature, like void() for a fucntion taking no parameters and int(std::string&,double*) for a function that takes a non-const refernce to a std::string and a pointer to a double and returns an int
+
+// std::packaged_task<> is a callable object, it can be wrapped in a std::function object, passed to a std::thread as the thread function, passed to another function that requires a callable or even invoked directly
+// passing tasks between threads:
+
+std::mutex m;
+std::deque<std::packaged_task<void()>> tasks;
+bool gui_shutdown_message_recieved();
+void get_and_process_gui_message();
+
+void gui_thread()
+{
+	while (!gui_shutdown_message_recieved())  // gui thread loops until a message is recieved to gui to shut down
+	{
+		get_and_process_gui_message();  // repeatedly polling for messages to handle and tasks on the task queue
+		std::packaged_task<void()> task;
+		{
+			std::lock_guard<std::mutex> lk(m);
+			if (tasks.empty()) continue;   // if there are no tasks on the queue then loop again
+			task = std::move(tasks.front());  // extract the task from the queue, release the lock on the queue
+			tasks.pop_front();
+		}
+		task();  // run the task, the future associated with the task will then be made ready when the task completes
+	}
+}
+// posting a task on the queue is simple
+std::thread gui_bg_thread(gui_thread);
+template<typename Func>
+std::future<void> post_task_for_gui_thread(Func f)
+{
+	std::packaged_task<void()> task(f);  // a packaged task is created from the supplied function
+	std::future<void> res = task.get_future();  // the future is obtained from the task
+	std::lock_guard<std::mutex> lk(m);
+	tasks.push_back(std::move(task));  // by calling the get_future() member function and the task is put on the list
+	return res;  // before the future is returned to the caller
+}
+
+// this example uses std::packaged_task<void()> for the tasks, which wraps a function or other callable object that takes no parameters and returns void
+// std::promise is used to set a future when the tasks cant be expressed as a simple fucntion call or we have tasks where the results come from more than one place
+
+// std::promise<T> provides a means of setting a value of type T that can later be read through an associated std::future<T> object
+// you can obtain the std::future object associated with a given std::promise by calling the get_future() member function, just like with packaged task
+// when the value of the promise is set using the set_value() method, the future becomes ready and can be used to retreieve the stored value
+// If you destroy the std::promise without setting a value, an exception is stored instead.
+
+// if the function call invoked as part of std::async throws an exception, that exception is stored in the future in place of a stored value, the future becomes ready and a call to get() rethrows that stored exception
+// the same happens if you wrap the function in an std::packaged_task- when the task is invoked, if the wrapped function throws an exception, the exception is stored in the future in place of the retunred result, ready to be thrown on a call to get()
+// std::promise provides the same facility, with an explicit function call. If you want to store an exception rather than a value, you can call the set_exception() member function rather than set_value()
+/*
+Another way to store an exception in a future is to destroy the std::promise or
+std::packaged_task associated with the future without calling either of the set functions on the promise or invoking the packaged task. In either case, the destructor of
+std::promise or std::packaged_task will store a std::future_error exception with
+an error code of std::future_errc::broken_promise in the associated state if the
+future isn’t already ready; by creating a future you make a promise to provide a value
+or exception, and by destroying the source of that value or exception without providing one, you break that promise. If the compiler didn’t store anything in the future in
+this case, waiting threads could potentially wait forever.
+ Up until now, all the examples have used std::future. However, std::future has
+its limitations, not the least of which being that only one thread can wait for the result.
+If you need to wait for the same event from more than one thread, you need to use
+std::shared_future instead.
+*/
+
+// when using std::future, only one thread can wait for the result
+// if you need to wait for the same event from more than one thread, you need to use std::shared_future instead
+
+// calls to the member functions of a particular std::future instance are not synchronised with each other
+// If you access a single std::future object from multiple threads without additional synchronization, you have a data race
+// and undefined behavior.This is by design : std::future models unique ownership of
+// the asynchronous result, and the one - shot nature of get() makes such concurrent
+// access pointless anyway—only one thread can retrieve the value, because after the first
+// call to get() there’s no value left to retrieve.
+
+// if the design of the concurrent code requires that multiple threads wait for the same event, std::shared_future allows that
+// std::future is only moveable, ownership can be transferred between instances but only one instance refers to a particular asynchronous result at a time
+// std::shared_future instances are copyable, so you can have multiple objects referring to the same associated state
+
+// the preferred way to access a shared_future in a thread safe way would be via mutex, or to give each thread its own copy of the shared_future object
+
+// we can call wait() and wait_for() on future objects to give them time to get readied
+// Duration - based waits are done with instances of std::chrono::duration<>.For
+// example, you can wait for up to 35 milliseconds for a future to be ready :
+// std::future<int> f = std::async(some_task);
+// if (f.wait_for(std::chrono::milliseconds(35)) == std::future_status::ready)
+// do_something_with(f.get());
+// The wait functions all return a status to indicate whether the wait timed out or the
+// waited - for event occurred.In this case, you’re waiting for a future, so the function
+// returns std::future_status::timeout if the wait times out, std::future_status::
+// ready if the future is ready, or std::future_status::deferred if the future’s task is deferred.
+
+
+// MEMORY MODEL
+// There are two aspects to the memory model, the basic structural aspects, which relate to how things are laid out in memory, and the concurrency aspects
 
 
 
@@ -265,6 +369,19 @@ int main()
 	auto f5 = std::async(bax, std::ref(x));  // calls bax(x)
 
 	auto f6 = std::async(move_only());  // calls tmo() where tmp is constructed from std::move(move_only())
+
+	auto f7 = std::async(std::launch::async, Y(), 1.2);  // run in new thread
+
+	auto f8 = std::async(std::launch::deferred, bax, std::ref(x));  // run in wait() or get()
+
+	auto f9 = std::async(std::launch::deferred | std::launch::async, bax, std::ref(x));  // implementation chooses
+
+	auto f10 = std::async(bax, std::ref(x));  // implementation chooses again
+
+	f10.get();  // remember that to get the value from a future you actually have to call get() on it
+	// now no other thread can call get() on f10, the value has already been taken
+
+	f8.wait();
 
 }
 
