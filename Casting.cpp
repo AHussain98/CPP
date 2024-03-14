@@ -4,6 +4,7 @@ using namespace std;
 //casting performs an explicit conversion
 // this can mean converting an expression to a different type, const to non const, data in a buffer to untyped binary, pointer to base class object and pointer to derived
 // casting should rarely be necessary if code is well written
+// key point, the casts do not change the object they are performned on directly at all, they only give you a different pointer to a related class type in the inheritance hierarchy.
 
 void print(char * x){
     cout << x;
