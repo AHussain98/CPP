@@ -25,11 +25,16 @@ int main() {
    mammal * mPtr = &m1;
    mPtr->speak();
    static_cast<human *>(mPtr);  // no effect
-   auto hPtr = static_cast<human *>(mPtr);  
+   auto hPtr = static_cast<human *>(mPtr);  // works
    hPtr->speak();
    mPtr->speak();  
+   
+   double val = 100.01;  
+   auto dub = static_cast<int>(val);
+   std::cout << dub << std::endl;  // 100
+   static_cast<int>(val);  // no effect
+   std::cout << val << std::endl;  // still 100.01
 }
-
 
 void print(char * x){
     cout << x;
