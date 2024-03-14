@@ -6,6 +6,31 @@ using namespace std;
 // casting should rarely be necessary if code is well written
 // check this: key point, the casts do not change the object they are performned on directly at all, they only give you a different pointer to a related class type in the inheritance hierarchy.
 
+
+#include <iostream>
+
+class mammal{
+    public:
+  void speak(){std::cout << "mammal" << std::endl;  }
+};
+
+class human : public mammal{
+    public:
+    void speak() {std::cout << "human" << std::endl;}
+}; 
+
+int main() {
+   
+   mammal m1;
+   mammal * mPtr = &m1;
+   mPtr->speak();
+   static_cast<human *>(mPtr);  // no effect
+   auto hPtr = static_cast<human *>(mPtr);  
+   hPtr->speak();
+   mPtr->speak();  
+}
+
+
 void print(char * x){
     cout << x;
 }
