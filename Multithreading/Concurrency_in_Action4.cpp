@@ -539,10 +539,76 @@ introduce additional ordering constraints by using fences
 
 
 // fences
-// fences are operations that 
+// fences are operations that enforce memry-ordering constraints without modifying any data and are typically combined with atomic operations that use the memory_order_relaxed ordering constraints
+// fences are global operations that affect the ordering of other atomic operations in the thread that executed the fence
+// fences are also called memory barriers, they get their names because they put a line in the code that certain operations cannot cross
+// relaxed operations on seperate variables can usually be freely reordered by the compiler or hardware, fences restrct this and introduce happens-before and synchronises with relationships 
+
+// adding a fence between two atomic operations on each thread:
+std::atomic<bool> x4, y4;
+std::atomic<int> z4;
+void write_x4_then_y4()
+{
+	x4.store(true, std::memory_order_relaxed);
+	std::atomic_thread_fence(std::memory_order_release);  // release fence here synchronises with the acquire fence becuase the load from y reads the value stored at y4 in here
+	y4.store(true, std::memory_order_relaxed);            // this means the store to x happens before the load from x, so the value read must be true and the assert cannot fire
+}                                                         // this is in contrats to the original case without teh fences where teh store and load form x werent ordered so the assert could fire
+                                                          // note that both fences are necessary, you need a release in one thread and an acquire in another thread to get a synchronise with relationship
+void read_y4_then_x4()
+{
+	while (!y4.load(std::memory_order_relaxed));
+	std::atomic_thread_fence(std::memory_order_acquire);
+	if (x4.load(std::memory_order_relaxed))
+	{
+		z4++;
+	}
+}
+
+/* int main()
+{
+ x=false;
+ y=false;
+ z=0;
+ std::thread a(write_x_then_y);
+ std::thread b(read_y_then_x);
+ a.join();
+ b.join();
+ assert(z.load()!=0); 
+}*/
+
+/*  In this case, the release fence has the same effect as if the store to y was
+tagged with memory_order_release rather than memory_order_relaxed. Likewise, the
+acquire fence makes it as if the load from y was tagged with memory_order_
+acquire. This is the general idea with fences: if an acquire operation sees the result of
+a store that takes place after a release fence, the fence synchronizes with that acquire
+operation; and if a load that takes place before an acquire fence sees the result of a
+release operation, the release operation synchronizes with the acquire fence. You can
+have fences on both sides, as in the example here, in which case if a load that takes
+place before the acquire fence sees a value written by a store that takes place after the
+release fence, the release fence synchronizes with the acquire fence*/
+
+// important note, the synchronisation point is the fence itself
+/* Although the fence synchronization depends on the values read or written by
+operations before or after the fence, it’s important to note that the synchronization
+point is the fence itself. If you take write_x_then_y from listing 5.12 and move the
+write to x after the fence as follows, the condition in the assert is no longer guaranteed
+to be true, even though the write to x comes before the write to y:
+
+void write_x_then_y()
+{
+ std::atomic_thread_fence(std::memory_order_release);
+ x.store(true,std::memory_order_relaxed); 
+ y.store(true,std::memory_order_relaxed); 
+}
+These two operations are no longer separated by the fence and so are no longer
+ordered. It’s only when the fence comes between the store to x and the store to y that
+it imposes an ordering. The presence or absence of a fence doesn’t affect any
+enforced orderings on happens-before relationships that exist because of other
+atomic operations.
+*/
 
 
-
+// ordering non-atomic operations with atomics
 
 
 int main()
