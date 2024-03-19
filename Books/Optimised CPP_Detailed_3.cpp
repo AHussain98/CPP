@@ -4,6 +4,7 @@
 # include <array>
 # include <string>
 # include <unordered_set>
+# include <span>
 
 // c++ treats memory as a sequence of cells, each is 1 byte in size and each has an address
 // accessing a byte by its address is O(1)
@@ -59,7 +60,7 @@ static_assert(std::is_nothrow_move_constructible<Person>::value);*/
 // c++20 introduced two free functions, erase and erase_if
 
 std::vector<int> vec{ 1,2,3,4,5 };
-std::erase(vec, 5); // erase 5 from vec
+//std::erase(vec, 5); // erase 5 from vec
 
 // as an alternative to the dynamically sized vector, the standard library also provides a fixed size version named std::array that managed its elements by using the stack as opposed to the free store
 std::array<int, 5> arr{ 1,2,3,4,5 }; // declare an array called arr with 5 int elements
@@ -192,7 +193,7 @@ auto person_hash = [](const Person& person) {
 
 
 // with the equality and hash functions defined, we can create our unordered_set, remember decltype yields the type of a specified expression
-auto persons = std::unordered_set<person, decltype(person_hash), decltype(person_eq)>{ 100, person_hash, person_eq };  // 100 buckets
+// auto persons = std::unordered_set<person, decltype(person_hash), decltype(person_eq)>{ 100, person_hash, person_eq };  // 100 buckets
 // <key, hash, keyequal>, constructor is bucket_count, hash func, equality func
 
 /* A good rule of thumb is to always use all of the data members that are being used 
@@ -219,6 +220,126 @@ member functions.  */
 // container adaptors: stack, queue and priority queue, these can be implemented by vector, list or deque
 
 
+// priority queue gives a constant time lookup of the element with highest priority
+// by default, priority is defined using the less than operator of the elements, insert and delete both run in logarithmic time
+
+
+// c++17 introduced string_view and c++20 instroduced std::span
+// these are not containers, but lightweight views of a sequence of contigous elements
+// they are non-owning reference types, they do not allocate memory
+/* A std::string_view contains a pointer to the beginning of an immutable string 
+buffer and a size. Since a string is a contiguous sequence of characters, the pointer 
+and the size fully define a valid substring range. Typically, a std::string_view
+points to some memory that is owned by a std::string. But it could also point to 
+a string literal with static storage duration or something like a memory-mapped file.  */
+
+// performance improvement for creating substrings becaus eyou dont need to create a new string with null char termination, you can just point to thechar in constant time
+// also performance improvement when passing to a fucntion as here's no copies made 
+
+auto some_func(std::string_view s) {  // pass by value  
+}
+
+
+/* A std::string_view instance can be constructed efficiently both from a std::string and a string literal and is, therefore, a well-suited type for function parameters  */
+
+// eliminate array decay with std::span, this represents a safer way to pass arrays to functions
+// span holds both the pointer to the memory and the size together in one object, we can use ti as a single type when passing sequences of elements to functions
+
+auto span_func(std::span<float> buffer)  // pass by value
+{
+	for (auto a : buffer)
+	{
+		std::cout << a;  // using iterators with a build in array!!
+	}
+}
+
+/* A span is also more convenient to use over a built-in array since it acts more like a 
+regular container with support for iterators.
+There are many similarities between std::string_view and std::span when it comes 
+to the data members (pointer and size) and the member functions. But there are also 
+some notable differences: the memory pointed to by std::span is mutable, whereas 
+the std::string_view always points to constant memory. std::string_view also 
+contains string-specific functions such as hash() and substr(), which are naturally 
+not part of std::span. Lastly, there is no compare() function in std::span, so it's not 
+possible to directly use the comparison operators on std::span objects  */
+
+
+// complexity guarantees only become relevant for large datasets, each container has its own overhead costs
+// remember computers are equipped with memory caches that make the use of data structures like vectors preferred
+
+/*  Use contains() when checking whether 
+an element exists in an associated container. Use empty() if you want to know 
+whether a container has any elements or is empty. Apart from expressing the intent 
+more clearly, it also has performance benefits. Checking the size of a linked list is an 
+O(n) operation, whereas calling empty() on a list runs in constant time, O(1).*/
+
+
+// when iterating over elements, consider spatial and temporal locality
+// when iterating over elements stored contigously in memory, we increase the probability that the data we need is already cached if we keep our objects small, thanks to spatial locality
+
+// define two structs
+
+struct smallObject {
+	std::array<char, 4> data{};
+	int score_{std::rand()};
+};
+
+struct bigObject {
+	std::array<char, 256> data{};
+	int score{ std::rand() };
+};
+
+// only array size differs
+// iterating over a vector of small objects will end up being almost 10 times faster! This is due to objects being small eough to fit in cache
+
+
+// keep classes small and give them a single responsibility
+
+// whenever possible, make classes smaller by moving sensible member data and functions into a ne class, and store a pointer to the neew class instead, this reduces the memory size of the initial class
+
+
+// algorithms:
+// for each, calls the function provided once for each element in the container, return value is ignored
+
+void print(const std::vector<int>& v)
+{
+	std::ranges::for_each(v, [](auto i) {std::cout << i << ","; });
+}
+
+auto in = std::vector{ 1, 2, 3, 4 };
+auto out = std::vector<int>(in.size());
+auto lambda = [](auto&& i) { return i * i; };
+
+// std::ranges::fill to fill a container with an element
+// generate() calls a function for each element and stores the return value at the current element
+
+// sort() is most common sorting function
+
+// find() for searching a container, returns end() iterator if element cannot be found, O(N) in worst case
+
+// if we know the collection is already sorted, we can use binary search, returns true or false if the element is/isnt found. O(N) for containers that provide random access to their elements
+
+// is_sorted can be used to check if a container is sorted, runs in O(N)
+
+// distance() to get the inde of a element
+
+// none_of, all_of, any_of check for conditions
+
+// count() to count the number of matching elements, O(N)
+
+// std::min, std::max
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -234,5 +355,19 @@ member functions.  */
 
 int main()
 {
+	some_func("Hi");  // called with literal
+
+	float buffer[256];
+	span_func(buffer);  // okay! array passed as span with size
+
+	std::cout << sizeof(smallObject) << " " << sizeof(bigObject) << std::endl;  // possible output is 8 and 260
+
+	std::vector<int> vec{ 1,2,3,4,5 };
+
+	print(vec);
+
+	std::ranges::transform(in, out.begin(), lambda);  // applies function and stores result in out
+
+	print(out);
 
 }
