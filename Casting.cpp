@@ -61,20 +61,24 @@ int main(){
 //dynamic casting is used to convert a pointer to a base class object to a pointer to a derviced class object
 }
 
-// fooling around with casting, the below all works
+// fooling around with casting
 struct A {
-  
- virtual void call(){ std::cout << 'A' << std::endl;}  
+
+    virtual void call() { std::cout << 'A' << std::endl; }
 };
 
 struct B : public A {
-  
- virtual void call(){ std::cout << 'B' << std::endl;}  
+
+    virtual void call() { std::cout << 'B' << std::endl; }
 };
 
 struct C : public B {
-  
-  void call(){ std::cout << 'C' << std::endl;}  
+
+    void call() { std::cout << 'C' << std::endl; }
+};
+
+struct D {
+    void call() {std::cout << "D" << std::endl;}
 };
 
 
@@ -83,12 +87,20 @@ int main()
     A a;
     B b;
     C c;
-    
-    A * ptr = &c;  // ptr pointing to the A region of c
-    ptr->call();  // prints C
-    static_cast<B*>(ptr);  // static cast is free, ptr pointing to B
-    ptr = &b;  // now pointing to the B region of B
+
+    A* ptr = &b;  // ptr pointing to the A region of b
     ptr->call();  // prints B
+    ptr = static_cast<B*>(ptr);  // static cast is free, ptr pointing to B
+    //ptr = &b;  // now pointing to the B region of B
+    ptr->call();  // prints B
+    
+    C * ptr2 = &c;
+    ptr2->call();  // prints C
+    
+    D d;
+    auto ptr3 = static_cast<D*>(ptr2);  // fails, types are not related, static cast fails in this case
+    
+    ptr3->call();
 
     return 0;
 }
