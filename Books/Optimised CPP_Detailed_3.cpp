@@ -5,6 +5,7 @@
 # include <string>
 # include <unordered_set>
 # include <span>
+# include <ranges>
 
 // c++ treats memory as a sequence of cells, each is 1 byte in size and each has an address
 // accessing a byte by its address is O(1)
@@ -330,23 +331,116 @@ auto lambda = [](auto&& i) { return i * i; };
 // std::min, std::max
 
 
+// Iterators are objects that provide a generic way to navigate through the elements in a sequence
+// algorithms can operate on iterators so they do not depend on the type of container and how its elements are arranged
+// Iterators are objects that represent a position in a sequence. They are used to navigate through the sequence and readn/write the element at their current position
+// Iterators can be considered an object with the same properties of a raw pointer, it can be stepped to the next element and dereferenced
+// a sentinel value is a special value that indicates the end of a sequence, they make it possible for iterators to run through a sequence without knowing how many elements are in it
+// the only requirement of the sentinel is that it can be compared with the iterator
+
+std::vector<int> numbers{ 1,2,3,4,5 };
+auto it = numbers.begin();
+auto end = numbers.end();  // this actually points to one past the last element of the vector
+
+// end actually points out of bounds, so we are not allowed to dereference it, but we can read the pointer value and compare with it
+
+// a range is a replacement for the iterator-sentinel pairs
+// any type that exposes begin() and end() functions is considered a range (given that these functions return iterators)
+// algorithms in the std::range namespace can operate on ranges instead of iterator pairs, we can pass the ranges directly to the algorithms
+
+auto vec = std::vector{ 1,2,3,4,5 };
+
+// iterators cna be moved forward or backwards
+std::next(it); // or it++
+std::prev(it);  // it it--
+
+// Jump to an arbitrary position: std::advance(it, n) or it += n
+// read: auto value = *it;
+//write: *it = 5;
+
+/* iterators might operate on data sources where a write or read implies 
+a step forward. Examples of such data sources could be user input, a network 
+connection, or a file. These data sources require the following operations:
+• Read only and step forward: auto value = *it; ++it;
+• Write only and step forward: *it = value; ++it;    */
 
 
+/*  Types of iterator:
+
+• std::input_iterator: Supports read only and step forward (once). One-pass
+algorithms such as std::count() can use input iterators. std::istream_
+iterator is an example of an input iterator.
+• std::output_iterator: Supports write only and step forward (once). Note that
+an output iterator can only write, not read. std::ostream_iterator is an
+example of an output iterator.
+• std::forward_iterator: Supports read and write and step forward. The value
+at the current position can be read or written multiple times. Singly linked
+lists such as std::forward_list expose forward iterators.
+• std::bidirectional_iterator: Supports read, write, step forward, and step
+backward. The doubly linked std::list exposes bidirectional iterators.
+• std::random_access_iterator: Supports read, write, step forward, step
+backward, and jump to an arbitrary position in constant time. The elements
+inside std::deque can be accessed with random access iterators.
+• std::contiguous_iterator: The same as random access iterators, but also
+guarantees that the underlying data is a contiguous block of memory, such
+as std::string, std::vector, std::array, std::span, and the (rarely used)
+std::valarray
+
+*/
+
+// functions from <algorithm> can only modify the elements in a specified range, elements are never added or deleted from the underlying container. Therefore the size of the container is not changed by the algorithm
+/* For example, std::remove() or std::unique() do not actually remove elements from 
+a container (despite their names). Rather, it moves the elements that should be kept 
+to the front of the container and then returns a sentinel that defines the new end of 
+the valid range of elements:
+*/
 
 
+// algorithms with output require allocating data
+
+/* Algorithms that write data to an output iterator, such as std::copy() or 
+std::transform(), require already allocated data reserved for the output. As the 
+algorithms only use iterators as arguments, they cannot allocate data by themselves. 
+To enlarge the container the algorithms operate on, they rely on the iterator being 
+capable of enlarging the container it iterates.
+If an iterator to an empty container is passed to the algorithms for output, the 
+program will likely crash. */
+
+/*   Instead, you have to do either of the following:
+  • Preallocate the required size for the resulting container, or
+  • Use an insert iterator, which inserts elements into a container while iterating, such as std::back_inserter  */
 
 
+/* Algorithms use operator==() and operator<() 
+by default
+For comparison, an algorithm relies on the fundamental == and < operators, as in the 
+case of an integer. To be able to use your own classes with algorithms, operator==() 
+and operator<() must either be provided by the class or as an argument to the
+algorithm   */
+
+/*  All algorithms use std::swap() and std::move() when moving elements around, but 
+only if the move constructor and move assignment are marked noexcept. Therefore, 
+it is important to have these implemented for heavy objects when using algorithms. 
+If they are not available and exception free, the elements will be copied instead. */
+
+/*  The constrained algorithms under std::ranges introduced with C++20 offer some 
+benefits over the iterator-based algorithms under std. The constrained algorithms do 
+the following:
+• Support projections, which simplifies custom comparisons of elements.
+• Support ranges instead of iterator pairs. There is no need to pass begin() and 
+end() iterators as separate arguments.
+• Are easy to use correctly and provide descriptive error messages during 
+compilation as a result of being constrained by C++ concepts  */
 
 
+// While sort() sorts the entire range, partial_sort() and nth_element() could be thought of as algorithms for inspecting parts of that sorted range.  nth element sorts only that element
+/* std::sort() O(n log n)
+std::partial_sort() O(n log m)
+std::nth_element() O(n)     */
 
+// nth element is much faster for finding a median, for example
 
-
-
-
-
-
-
-
+// ranges and views
 
 
 
@@ -369,5 +463,12 @@ int main()
 	std::ranges::transform(in, out.begin(), lambda);  // applies function and stores result in out
 
 	print(out);
+
+	*it++;   // dereference the iterator and increase the value it points at
+	it++;  // move the iterator on
+	std::cout << *it << std::endl;
+
+	std::cout << std::ranges::count(vec, 3);  // pass the range directly to the algorithm
+
 
 }
