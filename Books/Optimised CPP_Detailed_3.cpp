@@ -440,7 +440,27 @@ std::nth_element() O(n)     */
 
 // nth element is much faster for finding a median, for example
 
-// ranges and views
+// memory management
+
+// cpu spends a lot of time shuffling data between cpu registers and main memory, cpu uses memory caches to speed up access to memory, and programs need to be cache-friendly to run quickly
+// physical memory of the computer is shared between all the processes running on a system
+// most operating systems today are virtual memory operating systems, which provide the illusion that a process has all the memory for itself
+// each process has its own virtual address space
+// addresses in the virtual address space that programmers see are mapped to physical addresses by the operating system and the memory management unit. This translation happens each time we access a memory address
+// 
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
