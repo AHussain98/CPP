@@ -351,8 +351,8 @@ auto end = numbers.end();  // this actually points to one past the last element 
 auto vec = std::vector{ 1,2,3,4,5 };
 
 // iterators cna be moved forward or backwards
-std::next(it); // or it++
-std::prev(it);  // it it--
+//std::next(it); // or it++
+//std::prev(it);  // it it--
 
 // Jump to an arbitrary position: std::advance(it, n) or it += n
 // read: auto value = *it;
@@ -447,25 +447,137 @@ std::nth_element() O(n)     */
 // most operating systems today are virtual memory operating systems, which provide the illusion that a process has all the memory for itself
 // each process has its own virtual address space
 // addresses in the virtual address space that programmers see are mapped to physical addresses by the operating system and the memory management unit. This translation happens each time we access a memory address
-// 
+// this makes it possible for the OS to use physical memory for the parts of a process that are currently being used and back the rest of the virtual memory up on disk. The physical memory acts as a cache for the virtual memory space, which resides on secondary storage
+// The areas of the secondary storage that are used for backing up memory pages are usually called swap space, swap file, or simply pagefile, depending on the operating system
+// virtual memory makes it possible for processes to have a virtual address space bigger than the physical address space, since virtual memory that is not in use does not have to occupy physical memory
+
+/* The most common way to implement virtual memory today is to divide the address 
+space into fixed-size blocks called memory pages. When a process accesses memory 
+at a virtual address, the operating system checks whether the memory page is 
+backed by physical memory (a page frame). If the memory page is not mapped in the 
+main memory, a hardware exception occurs, and the page is loaded from disk into 
+memory. This type of hardware exception is called a page fault. This is not an error 
+but a necessary interrupt in order to load data from disk to memory. As you may 
+have guessed, though, this is very slow compared to reading data that is already 
+resident in memory
+
+When there are no more available page frames in the main physical memory, a page frame
+has to be evicted. If the page to be evicted is dirty, that is, it has been modified since
+it was last loaded from disk, it needs to be written to disk before it can be replaced.
+This mechanism is called paging. If the memory page has not been modified, the
+memory page is simply evicted.
+
+Not all operating systems that support virtual memory support paging. iOS, for
+example, does have virtual memory but dirty pages are never stored on disk; only
+clean pages can be evicted from memory. If the main memory is full, iOS will start
+terminating processes until there is enough free memory again. Android uses a
+similar strategy. One reason for not writing memory pages back to the flash storage
+of the mobile devices is that it drains the battery, and it also shortens the lifespan of
+the flash storage itself
+
+Thrashing can happen when a system runs low on physical memory and is,
+therefore, constantly paging. Whenever a process gets time scheduled on the CPU,
+it tries to access memory that has been paged out. Loading new memory pages
+means that the other pages first have to be stored on disk. Moving data back and
+forth between disk and memory is usually very slow; in some cases, this more or
+less stalls the computer since the system spends all its time paging. Looking at the
+system's page fault frequency is a good way to determine whether the program has
+started thrashing.
+
+C++ uses stack to implement function calls and manage the automatic storage of local variables
+both stack and heap reside in the processes virtual memory space
+The stack is
+a place where all the local variables reside; this also includes arguments to functions.
+The stack grows each time a function is called and contracts when a function returns.
+Each thread has its own stack and, hence, stack memory can be considered threadsafe. The heap, on the other hand, is a global memory area that is shared among all
+the threads in a running process. The heap grows when we allocate memory with
+new (or the C library functions malloc() and calloc()) and contracts when we free
+the memory with delete (or free()). Usually, the heap starts at a low address and
+grows in an upward direction, whereas the stack starts at a high address and grows
+in a downward direction.
+
+stack is a contigous memory block
+it has a fixed maximum size, the program crashes, this is called stack overflow
+stack memory never becomes fragmented
+allocating memory from the stack is almost always fast. page faults are possible but rare
+each thread in a program has its own stack
+
+total memory allocated for the stack is a fixed size contigous memory block created at thread startup
+stack grows each time the program enters a function and contracts when the function returns
+the stack also grows whenever we create a new stack variable within the same fucntion and contracts whenever such a variable goes out of scope
+
+The most common reason for the stack to overflow is by deep recursive
+calls and/or by using large, automatic variables on the stack. The maximum size
+of the stack differs among platforms and can also be configured for individual
+processes and threads.
+
+the heap is where the data with dynamic storage lives. the heap is shared among multiple threads, which means memory management for the heap needs to take concurrency into account
+this makes memory allocation in the heap more complicated than stack allocations, which are local per thread
+
+The allocation and deallocation pattern for stack memory is sequential, in the sense
+that memory is always deallocated in the reverse order to that in which it was
+allocated. On the other hand, for dynamic memory, the allocations and deallocations
+can happen arbitrarily. The dynamic lifetime of objects and the variable sizes of
+memory allocations increase the risk of fragmented memory.
+
+
+An easy way to understand the issue with memory fragmentation is to go through
+an example of how fragmented memory can occur. Suppose that we have a small
+contiguous memory block of 16 KB that we are allocating memory from. We are
+allocating objects of two types: type A, which is 1 KB, and type B, which is 2 KB. We
+first allocate an object of type A, followed by an object of type B. 
+Next, all objects of type A are no longer needed, so they can be deallocated. 
+There is now 10 KB of memory in use and 6 KB is available. Now, suppose we want
+to allocate a new object of type B, which is 2 KB. Although there is 6 KB of free
+memory, there is nowhere we can find a 2 KB memory block because the memory
+has become fragmented.
+
+
+all objects we use in a c++ program reside in memory
+
+the new keyword allocates memory to hold a new object of the type, and then constructs a new object in the allocated memory space by calling the constructor of the class
+the delete keyword destructs the user object by calling the destructor and dealloctes the memory that was used by the object
+
+C++ allows us to separate memory allocation from object construction. We could, for
+example, allocate a byte array with malloc() and construct a new User object in that
+region of memory. Have a look at the following code snippet:
+auto* memory = std::malloc(sizeof(User));
+auto* user = ::new (memory) User("john");
+The perhaps unfamiliar syntax that's using ::new (memory) is called placement new.
+It is a non-allocating form of new, which only constructs an object. The double colon
+(::) in front of new ensures that the resolution occurs from the global namespace to
+avoid picking up an overloaded version of operator new.
+In the preceding example, placement new constructs the User object and places
+it at the specified memory location. Since we are allocating the memory with
+std::malloc() for a single object, it is guaranteed to be correctly aligned (unless
+the class User has been declared to be overaligned). Later on, we will explore cases
+where we have to take alignment into account when using placement new.
+There is no placement delete, so in order to destruct the object and free the memory,
+we need to call the destructor explicitly and then free the memory:
+user->~User();
+std::free(memory);
+
+
+
+*/
+
+//memory alignment
+/*
+the cpu reads memory into its registers one word at a time
 
 
 
 
 
 
+*/
 
 
 
 
-
-
-
-
-
-
-
-
+struct User {
+	int number;
+};
 
 int main()
 {
@@ -489,6 +601,10 @@ int main()
 	std::cout << *it << std::endl;
 
 	std::cout << std::ranges::count(vec, 3);  // pass the range directly to the algorithm
+
+	auto user = new User();  // allocate and construct, memory allocated for new User object and then User created in that space by calling constructor
+	user->number = 1;  // use object
+	delete user;   // destruct and deallocate
 
 
 }
