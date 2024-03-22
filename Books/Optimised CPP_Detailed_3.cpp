@@ -7,6 +7,8 @@
 # include <span>
 # include <ranges>
 
+// literals are stored as statics, in their own region of memory. this is how they can be passed around, because theyre stored
+
 // c++ treats memory as a sequence of cells, each is 1 byte in size and each has an address
 // accessing a byte by its address is O(1)
 // cores wit within the cpu, each core has its own two levels of cahce and register, and access to the cpu-wide L3 cache
