@@ -6,8 +6,14 @@
 # include <unordered_set>
 # include <span>
 # include <ranges>
+# include <memory>
 
-// literals are stored as statics, in their own region of memory. this is how they can be passed around, because theyre stored
+/* data structure called bit arrays. It turns 
+out that std::vector<bool> is not at all a standard vector of C++ bool objects. 
+Instead, internally, it's a bit array. Operations such as count() and find() can be 
+optimized very efficiently in a bit array since it can process 64 bits at a time (on 
+a 64-bit machine), or possibly even more by using SIMD registers.*/
+
 
 // c++ treats memory as a sequence of cells, each is 1 byte in size and each has an address
 // accessing a byte by its address is O(1)
@@ -565,48 +571,204 @@ std::free(memory);
 
 //memory alignment
 /*
-the cpu reads memory into its registers one word at a time
+the cpu reads memory into its registers one word at a time.this is 64 bits or 32 bits depending on architecture
+for the cpu to work efficiently with different data types, it has restrictions on the addresses where objects of different types are located
+every type in C++ has an alignment requirement that defines the addresses that a object of a certain type should be located in memory
+
+if the alignment of a type is 1, it means objects of that type can be located at any byte address
+if the alignment of a type is 2, it means that the number of bytes between successive allowed addresses is 2
+"An alignment is an implementation-defined integer value representing the number of bytes between successive addresses at which a given object can be allocated."
+objects placed at aligned memory addresses can be read into registers by the cpu in an efficient way
 
 
+we can check if an object is correctly aligned using std::align
+
+It is possible to specify custom alignment requirements that are stricter than the
+default alignment when declaring a variable using the alignas specifier. Let's say we
+have a cache line size of 64 bytes and that we, for some reason, want to ensure that
+two variables are placed on separate cache lines. We could do the following:
+alignas(64) int x{};
+alignas(64) int y{};
+// x and y will be placed on different cache lines
+It's also possible to specify a custom alignment when defining a type. The following
+is a struct that will occupy exactly one cache line when being used:
+struct alignas(64) CacheLine {
+ std::byte data[64];
+};
+
+ if we want to write fully portable C++ code, we need to use std::align()
+and not modulo to check the alignment of an object. std::align() is a function from
+<memory> that will adjust a pointer according to an alignment that we pass as an
+argument. If the memory address we pass to it is already aligned, the pointer will
+not be adjusted. Therefore, we can use std::align() to implement a small utility
+function called is_aligned(), as follows:
+
+bool is_aligned(void* ptr, std::size_t alignment) {
+ assert(ptr != nullptr);
+ assert(std::has_single_bit(alignment)); // Power of 2
+ auto s = std::numeric_limits<std::size_t>::max();
+ auto aligned_ptr = ptr;
+ std::align(alignment, 1, aligned_ptr, s);
+ return ptr == aligned_ptr;
+}
+At first, we make sure that the ptr argument isn't null and that alignment is a power
+of 2, which is stated as a requirement in the C++ standard. We are using C++20
+std::has_single_bit() from the <bit> header to check this. Next, we are calling
+std::align(). The typical use case for std::align() is when we have a memory
+buffer of some size in which we want to store an object with some alignment
+requirement. In this case, we don't have a buffer, and we don't care about the size of
+the objects, so we say that the object is of size 1 and the buffer is the maximum value
+of a std::size_t. Then, we can compare the original ptr and the adjusted aligned_
+ptr to see if the original pointer was already aligned. We will have use for this utility
+in the examples to come.
+When allocating memory with new or std::malloc(), the memory we get back
+should be correctly aligned for the type we specify. The following code shows that
+the memory allocated for int is at least 4 bytes aligned on my platform:
+
+auto* p = new int{};
+assert(is_aligned(p, 4ul)); // True
+
+In fact, new and malloc() are guaranteed to always return memory suitably aligned
+for any scalar type (if it manages to return memory at all).
+
+As follows is an example in which we allocate a block of heap memory that should
+occupy exactly one memory page. In this case, the alignment-aware versions of
+operator new() and operator delete() will be invoked when using new and delete:
+
+constexpr auto ps = std::size_t{4096}; // Page size
+struct alignas(ps) Page {
+ std::byte data_[ps];
+};
+auto* page = new Page{}; // Memory page
+assert(is_aligned(page, ps)); // True
+// Use page ...
+delete page;
 
 
-
+the compiler sometimes needs to add extra bytes, padding to our user defined types. when we define data members in a class or struct,the compiler is forced to place the members in the ame order as we define them
+however, the compiler also has to ensure that the data members inside the class have the correct alignment, hence it needs to add padding between data members if necessary
 
 */
 
 
-
-
-struct User {
-	int number;
+class Document {
+	bool is_cached{};
+	double rank{};
+	int id{};
 };
 
-int main()
+// size of Document can be 24, this may be because the compiler adds padding for the bool and int, to fulfill the alignment requirements of the individual data members and the entire class
+
+/* The compiler converts the Document class into something 
+like this:
+class Document {
+ bool is_cached_{};
+ std::byte padding1[7]; // Invisible padding inserted by compiler
+ double rank_{};
+ int id_{};
+ std::byte padding2[4]; // Invisible padding inserted by compiler
+};
+
+The first padding between bool and double is 7 bytes, since the rank_ data member
+of the double type has an alignment of 8 bytes. The second padding that is added
+after int is 4 bytes. This is needed in order to fulfill the alignment requirements of
+the Document class itself. The member with the largest alignment requirement also
+determines the alignment requirement for the entire data structure. In our example,
+this means that the total size of the Document class must be a multiple of 8, since it
+contains a double value that is 8-byte aligned.
+*/
+
+// lets create a new version fo document that minimises the padding inserted by the compiler:
+/*
+class Document {
+ double rank_{}; // Rearranged data members
+ int id_{};
+ bool is_cached_{};
+};
+*/
+// size of document is now 16 bytes, padding is only after is_cached
+// size of an object can change just by changing the order in which its members are declared
+
+/* As a general rule, you can place the biggest data members at the beginning and the 
+smallest members at the end. In this way, you can minimize the memory overhead 
+caused by padding. Later on, we will see that we need to think about alignment 
+when placing objects in memory regions that we have allocated, before we know 
+the alignment of the objects that we are creating.
+From a performance perspective, there can also be cases where you want to align 
+objects to cache lines to minimize the number of cache lines an object spans over. 
+While we are on the subject of cache friendliness, it should also be mentioned that it 
+can be beneficial to place multiple data members that are frequently used together 
+next to each other.
+Keeping your data structures compact is important for performance. Many 
+applications are bound by memory access time. Another important aspect of memory 
+management is to never leak or waste memory for objects that are no longer needed. 
+We can effectively avoid all sorts of resource leaks by being clear and explicit about 
+the ownership of resources. This is the topic of the following section.      */
+
+// Memory Ownership
+
+// smart pointers help us specify the ownership of dynamic variables
+// other types of variables have defined ownership, local variables are owned by the current scope, when that scope ends, the objects within that scope are destroyed
+// static and global variables are owned by the program and will be destroyed when the program terminates
+// Data members are owned by the instances of the class they belong to
+// only dynamically allocated variables do not have a default owner
+
+
+auto func()
 {
-	some_func("Hi");  // called with literal
-
-	float buffer[256];
-	span_func(buffer);  // okay! array passed as span with size
-
-	std::cout << sizeof(smallObject) << " " << sizeof(bigObject) << std::endl;  // possible output is 8 and 260
-
-	std::vector<int> vec{ 1,2,3,4,5 };
-
-	print(vec);
-
-	std::ranges::transform(in, out.begin(), lambda);  // applies function and stores result in out
-
-	print(out);
-
-	*it++;   // dereference the iterator and increase the value it points at
-	it++;  // move the iterator on
-	std::cout << *it << std::endl;
-
-	std::cout << std::ranges::count(vec, 3);  // pass the range directly to the algorithm
-
-	auto user = new User();  // allocate and construct, memory allocated for new User object and then User created in that space by calling constructor
-	user->number = 1;  // use object
-	delete user;   // destruct and deallocate
-
-
+	std::vector<int> v {1, 2, 3, 4, 5};
 }
+
+// here we use stack and dynamic memory
+// vector is an automatic object that lives on the stack, owned by the stack scope
+// vector object uses dynamic memory to store the integer elements
+// when v goes out of scope, the destructor cleans up the dynamic memory
+
+
+// RAII -> resource acquisition is initialisation
+// lifetime of a resource is controlled by the lifetime of an object, this could be memory, database or network connection etc...
+// object to handle network connection:
+
+/*
+
+class RAIIConnection {
+public:
+ explicit RAIIConnection(const std::string& url) : connection_{open_connection(url)} {}
+ ~RAIIConnection() {
+      try {
+      close(connection_);
+       }
+       catch (const std::exception&) {
+        // Handle error, but never throw from a destructor
+       }
+    }
+ auto& get() { return connection_; }
+
+ private:
+ Connection connection_;
+};
+
+connection object now wrapped in a class that controls its lifetime. RAII makes our code safer
+
+containers are also a method of controlling elements
+
+smart pointers, weak, shared, unique
+
+unique: only I own this object, delete it when im done
+shared: i and others use this object, delete it when were done
+weak: ill use the object if it exists, but dont keep it alove just for me
+
+*/
+
+// unique pointer can only be owned by one entity, they can be moved but not copied
+auto owner { std::make_unique<std::string> ("Asad") };
+auto new_owner{ std::move(owner) }; // move ownership to this new unique pointer
+
+// unique pointers are efficient since they add very little perfprmance overhead
+/* The slight overhead is incurred by the 
+fact that std::unique_ptr has a non-trivial destructor, which means that (unlike a 
+raw pointer) it cannot be passed in a CPU register when being passed to a function. 
+This makes them slower than raw pointers */
+
+
+// shared pointer
