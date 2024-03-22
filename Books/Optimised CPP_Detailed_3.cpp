@@ -772,3 +772,55 @@ This makes them slower than raw pointers */
 
 
 // shared pointer
+
+
+
+
+
+
+
+
+
+
+
+
+
+struct User {
+	int number;
+};
+
+int main()
+{
+	some_func("Hi");  // called with literal
+
+	float buffer[256];
+	span_func(buffer);  // okay! array passed as span with size
+
+	std::cout << sizeof(smallObject) << " " << sizeof(bigObject) << std::endl;  // possible output is 8 and 260
+
+	std::vector<int> vec{ 1,2,3,4,5 };
+
+	print(vec);
+
+	std::ranges::transform(in, out.begin(), lambda);  // applies function and stores result in out
+
+	print(out);
+
+	*it++;   // dereference the iterator and increase the value it points at
+	it++;  // move the iterator on
+	std::cout << *it << std::endl;
+
+	std::cout << std::ranges::count(vec, 3);  // pass the range directly to the algorithm
+
+	auto user = new User();  // allocate and construct, memory allocated for new User object and then User created in that space by calling constructor
+	user->number = 1;  // use object
+	delete user;   // destruct and deallocate
+
+
+	// alignof() shows the alignment of the type
+	int num{ 5 };
+	std::cout << alignof(num);  // 4
+
+	std::cout << sizeof(Document);  // possible output is 24
+
+}
