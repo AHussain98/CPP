@@ -1,3 +1,4 @@
+
 # include <iostream>
 # include <vector>
 # include <algorithm>
@@ -8,10 +9,10 @@
 # include <ranges>
 # include <memory>
 
-/* data structure called bit arrays. It turns 
-out that std::vector<bool> is not at all a standard vector of C++ bool objects. 
-Instead, internally, it's a bit array. Operations such as count() and find() can be 
-optimized very efficiently in a bit array since it can process 64 bits at a time (on 
+/* data structure called bit arrays. It turns
+out that std::vector<bool> is not at all a standard vector of C++ bool objects.
+Instead, internally, it's a bit array. Operations such as count() and find() can be
+optimized very efficiently in a bit array since it can process 64 bits at a time (on
 a 64-bit machine), or possibly even more by using SIMD registers.*/
 
 
@@ -130,27 +131,27 @@ of the string is small.*/
 // they require that the elements are compared with the equality operator == and that there is a way to compute a hash value based on an element
 // the functions for adding, deleting and finding elements are all O(1) in the hash table-based containers. These are unordered set and unorderd map, unordered multiset and unordered multimap
 
-/* Since C++20, all associative containers are equipped with a function named 
-contains(), which should be used when you want to know whether a container 
+/* Since C++20, all associative containers are equipped with a function named
+contains(), which should be used when you want to know whether a container
 contains some specific elements.  Always use pecialised functions such as these when needed, they're uaranteed to be most efficient  */
 
 // ordered associative containers guarantee that insert, delete and search can be done in logarithmic time logN
 // library implementations we know about use some kind of self balancing binary search tree
-/* The fact that the tree stays approximately 
-balanced is necessary for controlling the height of the tree, and, hence, also the 
-worst-case running time when accessing elements. There is no need for the tree to 
-pre-allocate memory, so, typically, a tree will allocate memory on the free store each 
+/* The fact that the tree stays approximately
+balanced is necessary for controlling the height of the tree, and, hence, also the
+worst-case running time when accessing elements. There is no need for the tree to
+pre-allocate memory, so, typically, a tree will allocate memory on the free store each
 time an element is inserted and also free up memory whenever elements are erased. */
 
 // the unordered versions of sets and maps use hash tables to store elements
 // in theory these have amortized constant insert, add and delete operations, which perform better than the tree based versions
 // However in practice the difference may not be so obvious, especially if we do NOT store a very large number of elements 
 // A hash table keeps it elements in some sort of array of buckets. When adding an element to the hash table, an integer is computed for the element using a hash function. This integer is called the hash of the element
-/*  The hash value is then limited to the size of the array 
-(by using the modulo operation, for example) so that the new limited value can be 
-used as an index in the array. Once the index is computed, the hash table can store 
-the element in the array at that index. The lookup of an element works in a similar 
-manner by first computing a hash value for the element we are looking for and then 
+/*  The hash value is then limited to the size of the array
+(by using the modulo operation, for example) so that the new limited value can be
+used as an index in the array. Once the index is computed, the hash table can store
+the element in the array at that index. The lookup of an element works in a similar
+manner by first computing a hash value for the element we are looking for and then
 accessing the array
 
  What if two different elements generate the same index,
@@ -188,15 +189,15 @@ struct person
 auto person_eq = [](const person& lhs, const person& rhs) { return lhs.name == rhs.name && lhs.age == rhs.age; };
 
 // for two person objects to be equal, they need to have the same name and age
-/* We can now define the hash predicate by combining the hash values of all of 
-the data members that are included in the equals predicate. Unfortunately, there is 
-no function in the C++ standard yet to combine hash values, but there is a good one 
+/* We can now define the hash predicate by combining the hash values of all of
+the data members that are included in the equals predicate. Unfortunately, there is
+no function in the C++ standard yet to combine hash values, but there is a good one
 available in Boost, which we will use here:
 #include <boost/functional/hash.hpp>
-auto person_hash = [](const Person& person) { 
+auto person_hash = [](const Person& person) {
  auto seed = size_t{0};
- boost::hash_combine(seed, person.name()); 
- boost::hash_combine(seed, person.age()); 
+ boost::hash_combine(seed, person.name());
+ boost::hash_combine(seed, person.age());
  return seed;
 }*/
 
@@ -205,23 +206,23 @@ auto person_hash = [](const Person& person) {
 // auto persons = std::unordered_set<person, decltype(person_hash), decltype(person_eq)>{ 100, person_hash, person_eq };  // 100 buckets
 // <key, hash, keyequal>, constructor is bucket_count, hash func, equality func
 
-/* A good rule of thumb is to always use all of the data members that are being used 
-in the equal function when producing the hash value. That way, we adhere to the 
-contract between equals and hash, and, at the same time, this enables us to provide 
-an effective hash value. For example, it would be correct but inefficient to only use 
+/* A good rule of thumb is to always use all of the data members that are being used
+in the equal function when producing the hash value. That way, we adhere to the
+contract between equals and hash, and, at the same time, this enables us to provide
+an effective hash value. For example, it would be correct but inefficient to only use
 the name when computing the hash value, since that would mean that all Person
-objects with the same name would end up in the same bucket. Even worse, though, 
-would be to include data members in the hash function that are not being used in the 
-equals function. This would most likely result in a disaster where you cannot find 
+objects with the same name would end up in the same bucket. Even worse, though,
+would be to include data members in the hash function that are not being used in the
+equals function. This would most likely result in a disaster where you cannot find
 objects in your unordered_set that, in fact, compare equally  */
 
-/* Apart from creating hash values that distribute the keys evenly among the buckets, 
-we can reduce the number of collisions by having many buckets. The average 
-number of elements per bucket is called the load factor. In the preceding example, 
-we created an unordered_set with 100 buckets. If we add 50 Person objects to the set, 
-load_factor() would return 0.5. The max_load_factor is an upper limit of the load 
-factor, and when that value is reached, the set will need to increase the number of 
-buckets, and, as a consequence, also rehash all the elements that are currently in the 
+/* Apart from creating hash values that distribute the keys evenly among the buckets,
+we can reduce the number of collisions by having many buckets. The average
+number of elements per bucket is called the load factor. In the preceding example,
+we created an unordered_set with 100 buckets. If we add 50 Person objects to the set,
+load_factor() would return 0.5. The max_load_factor is an upper limit of the load
+factor, and when that value is reached, the set will need to increase the number of
+buckets, and, as a consequence, also rehash all the elements that are currently in the
 set. It's also possible to trigger a rehash manually with the rehash() and reserve()
 member functions.  */
 
@@ -236,10 +237,10 @@ member functions.  */
 // c++17 introduced string_view and c++20 instroduced std::span
 // these are not containers, but lightweight views of a sequence of contigous elements
 // they are non-owning reference types, they do not allocate memory
-/* A std::string_view contains a pointer to the beginning of an immutable string 
-buffer and a size. Since a string is a contiguous sequence of characters, the pointer 
+/* A std::string_view contains a pointer to the beginning of an immutable string
+buffer and a size. Since a string is a contiguous sequence of characters, the pointer
 and the size fully define a valid substring range. Typically, a std::string_view
-points to some memory that is owned by a std::string. But it could also point to 
+points to some memory that is owned by a std::string. But it could also point to
 a string literal with static storage duration or something like a memory-mapped file.  */
 
 // performance improvement for creating substrings becaus eyou dont need to create a new string with null char termination, you can just point to thechar in constant time
@@ -262,24 +263,24 @@ auto span_func(std::span<float> buffer)  // pass by value
 	}
 }
 
-/* A span is also more convenient to use over a built-in array since it acts more like a 
+/* A span is also more convenient to use over a built-in array since it acts more like a
 regular container with support for iterators.
-There are many similarities between std::string_view and std::span when it comes 
-to the data members (pointer and size) and the member functions. But there are also 
-some notable differences: the memory pointed to by std::span is mutable, whereas 
-the std::string_view always points to constant memory. std::string_view also 
-contains string-specific functions such as hash() and substr(), which are naturally 
-not part of std::span. Lastly, there is no compare() function in std::span, so it's not 
+There are many similarities between std::string_view and std::span when it comes
+to the data members (pointer and size) and the member functions. But there are also
+some notable differences: the memory pointed to by std::span is mutable, whereas
+the std::string_view always points to constant memory. std::string_view also
+contains string-specific functions such as hash() and substr(), which are naturally
+not part of std::span. Lastly, there is no compare() function in std::span, so it's not
 possible to directly use the comparison operators on std::span objects  */
 
 
 // complexity guarantees only become relevant for large datasets, each container has its own overhead costs
 // remember computers are equipped with memory caches that make the use of data structures like vectors preferred
 
-/*  Use contains() when checking whether 
-an element exists in an associated container. Use empty() if you want to know 
-whether a container has any elements or is empty. Apart from expressing the intent 
-more clearly, it also has performance benefits. Checking the size of a linked list is an 
+/*  Use contains() when checking whether
+an element exists in an associated container. Use empty() if you want to know
+whether a container has any elements or is empty. Apart from expressing the intent
+more clearly, it also has performance benefits. Checking the size of a linked list is an
 O(n) operation, whereas calling empty() on a list runs in constant time, O(1).*/
 
 
@@ -290,7 +291,7 @@ O(n) operation, whereas calling empty() on a list runs in constant time, O(1).*/
 
 struct smallObject {
 	std::array<char, 4> data{};
-	int score_{std::rand()};
+	int score_{ std::rand() };
 };
 
 struct bigObject {
@@ -366,8 +367,8 @@ auto vec = std::vector{ 1,2,3,4,5 };
 // read: auto value = *it;
 //write: *it = 5;
 
-/* iterators might operate on data sources where a write or read implies 
-a step forward. Examples of such data sources could be user input, a network 
+/* iterators might operate on data sources where a write or read implies
+a step forward. Examples of such data sources could be user input, a network
 connection, or a file. These data sources require the following operations:
 • Read only and step forward: auto value = *it; ++it;
 • Write only and step forward: *it = value; ++it;    */
@@ -397,21 +398,21 @@ std::valarray
 */
 
 // functions from <algorithm> can only modify the elements in a specified range, elements are never added or deleted from the underlying container. Therefore the size of the container is not changed by the algorithm
-/* For example, std::remove() or std::unique() do not actually remove elements from 
-a container (despite their names). Rather, it moves the elements that should be kept 
-to the front of the container and then returns a sentinel that defines the new end of 
+/* For example, std::remove() or std::unique() do not actually remove elements from
+a container (despite their names). Rather, it moves the elements that should be kept
+to the front of the container and then returns a sentinel that defines the new end of
 the valid range of elements:
 */
 
 
 // algorithms with output require allocating data
 
-/* Algorithms that write data to an output iterator, such as std::copy() or 
-std::transform(), require already allocated data reserved for the output. As the 
-algorithms only use iterators as arguments, they cannot allocate data by themselves. 
-To enlarge the container the algorithms operate on, they rely on the iterator being 
+/* Algorithms that write data to an output iterator, such as std::copy() or
+std::transform(), require already allocated data reserved for the output. As the
+algorithms only use iterators as arguments, they cannot allocate data by themselves.
+To enlarge the container the algorithms operate on, they rely on the iterator being
 capable of enlarging the container it iterates.
-If an iterator to an empty container is passed to the algorithms for output, the 
+If an iterator to an empty container is passed to the algorithms for output, the
 program will likely crash. */
 
 /*   Instead, you have to do either of the following:
@@ -419,236 +420,236 @@ program will likely crash. */
   • Use an insert iterator, which inserts elements into a container while iterating, such as std::back_inserter  */
 
 
-/* Algorithms use operator==() and operator<() 
-by default
-For comparison, an algorithm relies on the fundamental == and < operators, as in the 
-case of an integer. To be able to use your own classes with algorithms, operator==() 
-and operator<() must either be provided by the class or as an argument to the
-algorithm   */
+  /* Algorithms use operator==() and operator<()
+  by default
+  For comparison, an algorithm relies on the fundamental == and < operators, as in the
+  case of an integer. To be able to use your own classes with algorithms, operator==()
+  and operator<() must either be provided by the class or as an argument to the
+  algorithm   */
 
-/*  All algorithms use std::swap() and std::move() when moving elements around, but 
-only if the move constructor and move assignment are marked noexcept. Therefore, 
-it is important to have these implemented for heavy objects when using algorithms. 
-If they are not available and exception free, the elements will be copied instead. */
+  /*  All algorithms use std::swap() and std::move() when moving elements around, but
+  only if the move constructor and move assignment are marked noexcept. Therefore,
+  it is important to have these implemented for heavy objects when using algorithms.
+  If they are not available and exception free, the elements will be copied instead. */
 
-/*  The constrained algorithms under std::ranges introduced with C++20 offer some 
-benefits over the iterator-based algorithms under std. The constrained algorithms do 
-the following:
-• Support projections, which simplifies custom comparisons of elements.
-• Support ranges instead of iterator pairs. There is no need to pass begin() and 
-end() iterators as separate arguments.
-• Are easy to use correctly and provide descriptive error messages during 
-compilation as a result of being constrained by C++ concepts  */
-
-
-// While sort() sorts the entire range, partial_sort() and nth_element() could be thought of as algorithms for inspecting parts of that sorted range.  nth element sorts only that element
-/* std::sort() O(n log n)
-std::partial_sort() O(n log m)
-std::nth_element() O(n)     */
-
-// nth element is much faster for finding a median, for example
-
-// memory management
-
-// cpu spends a lot of time shuffling data between cpu registers and main memory, cpu uses memory caches to speed up access to memory, and programs need to be cache-friendly to run quickly
-// physical memory of the computer is shared between all the processes running on a system
-// most operating systems today are virtual memory operating systems, which provide the illusion that a process has all the memory for itself
-// each process has its own virtual address space
-// addresses in the virtual address space that programmers see are mapped to physical addresses by the operating system and the memory management unit. This translation happens each time we access a memory address
-// this makes it possible for the OS to use physical memory for the parts of a process that are currently being used and back the rest of the virtual memory up on disk. The physical memory acts as a cache for the virtual memory space, which resides on secondary storage
-// The areas of the secondary storage that are used for backing up memory pages are usually called swap space, swap file, or simply pagefile, depending on the operating system
-// virtual memory makes it possible for processes to have a virtual address space bigger than the physical address space, since virtual memory that is not in use does not have to occupy physical memory
-
-/* The most common way to implement virtual memory today is to divide the address 
-space into fixed-size blocks called memory pages. When a process accesses memory 
-at a virtual address, the operating system checks whether the memory page is 
-backed by physical memory (a page frame). If the memory page is not mapped in the 
-main memory, a hardware exception occurs, and the page is loaded from disk into 
-memory. This type of hardware exception is called a page fault. This is not an error 
-but a necessary interrupt in order to load data from disk to memory. As you may 
-have guessed, though, this is very slow compared to reading data that is already 
-resident in memory
-
-When there are no more available page frames in the main physical memory, a page frame
-has to be evicted. If the page to be evicted is dirty, that is, it has been modified since
-it was last loaded from disk, it needs to be written to disk before it can be replaced.
-This mechanism is called paging. If the memory page has not been modified, the
-memory page is simply evicted.
-
-Not all operating systems that support virtual memory support paging. iOS, for
-example, does have virtual memory but dirty pages are never stored on disk; only
-clean pages can be evicted from memory. If the main memory is full, iOS will start
-terminating processes until there is enough free memory again. Android uses a
-similar strategy. One reason for not writing memory pages back to the flash storage
-of the mobile devices is that it drains the battery, and it also shortens the lifespan of
-the flash storage itself
-
-Thrashing can happen when a system runs low on physical memory and is,
-therefore, constantly paging. Whenever a process gets time scheduled on the CPU,
-it tries to access memory that has been paged out. Loading new memory pages
-means that the other pages first have to be stored on disk. Moving data back and
-forth between disk and memory is usually very slow; in some cases, this more or
-less stalls the computer since the system spends all its time paging. Looking at the
-system's page fault frequency is a good way to determine whether the program has
-started thrashing.
-
-C++ uses stack to implement function calls and manage the automatic storage of local variables
-both stack and heap reside in the processes virtual memory space
-The stack is
-a place where all the local variables reside; this also includes arguments to functions.
-The stack grows each time a function is called and contracts when a function returns.
-Each thread has its own stack and, hence, stack memory can be considered threadsafe. The heap, on the other hand, is a global memory area that is shared among all
-the threads in a running process. The heap grows when we allocate memory with
-new (or the C library functions malloc() and calloc()) and contracts when we free
-the memory with delete (or free()). Usually, the heap starts at a low address and
-grows in an upward direction, whereas the stack starts at a high address and grows
-in a downward direction.
-
-stack is a contigous memory block
-it has a fixed maximum size, the program crashes, this is called stack overflow
-stack memory never becomes fragmented
-allocating memory from the stack is almost always fast. page faults are possible but rare
-each thread in a program has its own stack
-
-total memory allocated for the stack is a fixed size contigous memory block created at thread startup
-stack grows each time the program enters a function and contracts when the function returns
-the stack also grows whenever we create a new stack variable within the same fucntion and contracts whenever such a variable goes out of scope
-
-The most common reason for the stack to overflow is by deep recursive
-calls and/or by using large, automatic variables on the stack. The maximum size
-of the stack differs among platforms and can also be configured for individual
-processes and threads.
-
-the heap is where the data with dynamic storage lives. the heap is shared among multiple threads, which means memory management for the heap needs to take concurrency into account
-this makes memory allocation in the heap more complicated than stack allocations, which are local per thread
-
-The allocation and deallocation pattern for stack memory is sequential, in the sense
-that memory is always deallocated in the reverse order to that in which it was
-allocated. On the other hand, for dynamic memory, the allocations and deallocations
-can happen arbitrarily. The dynamic lifetime of objects and the variable sizes of
-memory allocations increase the risk of fragmented memory.
+  /*  The constrained algorithms under std::ranges introduced with C++20 offer some
+  benefits over the iterator-based algorithms under std. The constrained algorithms do
+  the following:
+  • Support projections, which simplifies custom comparisons of elements.
+  • Support ranges instead of iterator pairs. There is no need to pass begin() and
+  end() iterators as separate arguments.
+  • Are easy to use correctly and provide descriptive error messages during
+  compilation as a result of being constrained by C++ concepts  */
 
 
-An easy way to understand the issue with memory fragmentation is to go through
-an example of how fragmented memory can occur. Suppose that we have a small
-contiguous memory block of 16 KB that we are allocating memory from. We are
-allocating objects of two types: type A, which is 1 KB, and type B, which is 2 KB. We
-first allocate an object of type A, followed by an object of type B. 
-Next, all objects of type A are no longer needed, so they can be deallocated. 
-There is now 10 KB of memory in use and 6 KB is available. Now, suppose we want
-to allocate a new object of type B, which is 2 KB. Although there is 6 KB of free
-memory, there is nowhere we can find a 2 KB memory block because the memory
-has become fragmented.
+  // While sort() sorts the entire range, partial_sort() and nth_element() could be thought of as algorithms for inspecting parts of that sorted range.  nth element sorts only that element
+  /* std::sort() O(n log n)
+  std::partial_sort() O(n log m)
+  std::nth_element() O(n)     */
+
+  // nth element is much faster for finding a median, for example
+
+  // memory management
+
+  // cpu spends a lot of time shuffling data between cpu registers and main memory, cpu uses memory caches to speed up access to memory, and programs need to be cache-friendly to run quickly
+  // physical memory of the computer is shared between all the processes running on a system
+  // most operating systems today are virtual memory operating systems, which provide the illusion that a process has all the memory for itself
+  // each process has its own virtual address space
+  // addresses in the virtual address space that programmers see are mapped to physical addresses by the operating system and the memory management unit. This translation happens each time we access a memory address
+  // this makes it possible for the OS to use physical memory for the parts of a process that are currently being used and back the rest of the virtual memory up on disk. The physical memory acts as a cache for the virtual memory space, which resides on secondary storage
+  // The areas of the secondary storage that are used for backing up memory pages are usually called swap space, swap file, or simply pagefile, depending on the operating system
+  // virtual memory makes it possible for processes to have a virtual address space bigger than the physical address space, since virtual memory that is not in use does not have to occupy physical memory
+
+  /* The most common way to implement virtual memory today is to divide the address
+  space into fixed-size blocks called memory pages. When a process accesses memory
+  at a virtual address, the operating system checks whether the memory page is
+  backed by physical memory (a page frame). If the memory page is not mapped in the
+  main memory, a hardware exception occurs, and the page is loaded from disk into
+  memory. This type of hardware exception is called a page fault. This is not an error
+  but a necessary interrupt in order to load data from disk to memory. As you may
+  have guessed, though, this is very slow compared to reading data that is already
+  resident in memory
+
+  When there are no more available page frames in the main physical memory, a page frame
+  has to be evicted. If the page to be evicted is dirty, that is, it has been modified since
+  it was last loaded from disk, it needs to be written to disk before it can be replaced.
+  This mechanism is called paging. If the memory page has not been modified, the
+  memory page is simply evicted.
+
+  Not all operating systems that support virtual memory support paging. iOS, for
+  example, does have virtual memory but dirty pages are never stored on disk; only
+  clean pages can be evicted from memory. If the main memory is full, iOS will start
+  terminating processes until there is enough free memory again. Android uses a
+  similar strategy. One reason for not writing memory pages back to the flash storage
+  of the mobile devices is that it drains the battery, and it also shortens the lifespan of
+  the flash storage itself
+
+  Thrashing can happen when a system runs low on physical memory and is,
+  therefore, constantly paging. Whenever a process gets time scheduled on the CPU,
+  it tries to access memory that has been paged out. Loading new memory pages
+  means that the other pages first have to be stored on disk. Moving data back and
+  forth between disk and memory is usually very slow; in some cases, this more or
+  less stalls the computer since the system spends all its time paging. Looking at the
+  system's page fault frequency is a good way to determine whether the program has
+  started thrashing.
+
+  C++ uses stack to implement function calls and manage the automatic storage of local variables
+  both stack and heap reside in the processes virtual memory space
+  The stack is
+  a place where all the local variables reside; this also includes arguments to functions.
+  The stack grows each time a function is called and contracts when a function returns.
+  Each thread has its own stack and, hence, stack memory can be considered threadsafe. The heap, on the other hand, is a global memory area that is shared among all
+  the threads in a running process. The heap grows when we allocate memory with
+  new (or the C library functions malloc() and calloc()) and contracts when we free
+  the memory with delete (or free()). Usually, the heap starts at a low address and
+  grows in an upward direction, whereas the stack starts at a high address and grows
+  in a downward direction.
+
+  stack is a contigous memory block
+  it has a fixed maximum size, the program crashes, this is called stack overflow
+  stack memory never becomes fragmented
+  allocating memory from the stack is almost always fast. page faults are possible but rare
+  each thread in a program has its own stack
+
+  total memory allocated for the stack is a fixed size contigous memory block created at thread startup
+  stack grows each time the program enters a function and contracts when the function returns
+  the stack also grows whenever we create a new stack variable within the same fucntion and contracts whenever such a variable goes out of scope
+
+  The most common reason for the stack to overflow is by deep recursive
+  calls and/or by using large, automatic variables on the stack. The maximum size
+  of the stack differs among platforms and can also be configured for individual
+  processes and threads.
+
+  the heap is where the data with dynamic storage lives. the heap is shared among multiple threads, which means memory management for the heap needs to take concurrency into account
+  this makes memory allocation in the heap more complicated than stack allocations, which are local per thread
+
+  The allocation and deallocation pattern for stack memory is sequential, in the sense
+  that memory is always deallocated in the reverse order to that in which it was
+  allocated. On the other hand, for dynamic memory, the allocations and deallocations
+  can happen arbitrarily. The dynamic lifetime of objects and the variable sizes of
+  memory allocations increase the risk of fragmented memory.
 
 
-all objects we use in a c++ program reside in memory
-
-the new keyword allocates memory to hold a new object of the type, and then constructs a new object in the allocated memory space by calling the constructor of the class
-the delete keyword destructs the user object by calling the destructor and dealloctes the memory that was used by the object
-
-C++ allows us to separate memory allocation from object construction. We could, for
-example, allocate a byte array with malloc() and construct a new User object in that
-region of memory. Have a look at the following code snippet:
-auto* memory = std::malloc(sizeof(User));
-auto* user = ::new (memory) User("john");
-The perhaps unfamiliar syntax that's using ::new (memory) is called placement new.
-It is a non-allocating form of new, which only constructs an object. The double colon
-(::) in front of new ensures that the resolution occurs from the global namespace to
-avoid picking up an overloaded version of operator new.
-In the preceding example, placement new constructs the User object and places
-it at the specified memory location. Since we are allocating the memory with
-std::malloc() for a single object, it is guaranteed to be correctly aligned (unless
-the class User has been declared to be overaligned). Later on, we will explore cases
-where we have to take alignment into account when using placement new.
-There is no placement delete, so in order to destruct the object and free the memory,
-we need to call the destructor explicitly and then free the memory:
-user->~User();
-std::free(memory);
+  An easy way to understand the issue with memory fragmentation is to go through
+  an example of how fragmented memory can occur. Suppose that we have a small
+  contiguous memory block of 16 KB that we are allocating memory from. We are
+  allocating objects of two types: type A, which is 1 KB, and type B, which is 2 KB. We
+  first allocate an object of type A, followed by an object of type B.
+  Next, all objects of type A are no longer needed, so they can be deallocated.
+  There is now 10 KB of memory in use and 6 KB is available. Now, suppose we want
+  to allocate a new object of type B, which is 2 KB. Although there is 6 KB of free
+  memory, there is nowhere we can find a 2 KB memory block because the memory
+  has become fragmented.
 
 
+  all objects we use in a c++ program reside in memory
 
-*/
+  the new keyword allocates memory to hold a new object of the type, and then constructs a new object in the allocated memory space by calling the constructor of the class
+  the delete keyword destructs the user object by calling the destructor and dealloctes the memory that was used by the object
 
-//memory alignment
-/*
-the cpu reads memory into its registers one word at a time.this is 64 bits or 32 bits depending on architecture
-for the cpu to work efficiently with different data types, it has restrictions on the addresses where objects of different types are located
-every type in C++ has an alignment requirement that defines the addresses that a object of a certain type should be located in memory
-
-if the alignment of a type is 1, it means objects of that type can be located at any byte address
-if the alignment of a type is 2, it means that the number of bytes between successive allowed addresses is 2
-"An alignment is an implementation-defined integer value representing the number of bytes between successive addresses at which a given object can be allocated."
-objects placed at aligned memory addresses can be read into registers by the cpu in an efficient way
-
-
-we can check if an object is correctly aligned using std::align
-
-It is possible to specify custom alignment requirements that are stricter than the
-default alignment when declaring a variable using the alignas specifier. Let's say we
-have a cache line size of 64 bytes and that we, for some reason, want to ensure that
-two variables are placed on separate cache lines. We could do the following:
-alignas(64) int x{};
-alignas(64) int y{};
-// x and y will be placed on different cache lines
-It's also possible to specify a custom alignment when defining a type. The following
-is a struct that will occupy exactly one cache line when being used:
-struct alignas(64) CacheLine {
- std::byte data[64];
-};
-
- if we want to write fully portable C++ code, we need to use std::align()
-and not modulo to check the alignment of an object. std::align() is a function from
-<memory> that will adjust a pointer according to an alignment that we pass as an
-argument. If the memory address we pass to it is already aligned, the pointer will
-not be adjusted. Therefore, we can use std::align() to implement a small utility
-function called is_aligned(), as follows:
-
-bool is_aligned(void* ptr, std::size_t alignment) {
- assert(ptr != nullptr);
- assert(std::has_single_bit(alignment)); // Power of 2
- auto s = std::numeric_limits<std::size_t>::max();
- auto aligned_ptr = ptr;
- std::align(alignment, 1, aligned_ptr, s);
- return ptr == aligned_ptr;
-}
-At first, we make sure that the ptr argument isn't null and that alignment is a power
-of 2, which is stated as a requirement in the C++ standard. We are using C++20
-std::has_single_bit() from the <bit> header to check this. Next, we are calling
-std::align(). The typical use case for std::align() is when we have a memory
-buffer of some size in which we want to store an object with some alignment
-requirement. In this case, we don't have a buffer, and we don't care about the size of
-the objects, so we say that the object is of size 1 and the buffer is the maximum value
-of a std::size_t. Then, we can compare the original ptr and the adjusted aligned_
-ptr to see if the original pointer was already aligned. We will have use for this utility
-in the examples to come.
-When allocating memory with new or std::malloc(), the memory we get back
-should be correctly aligned for the type we specify. The following code shows that
-the memory allocated for int is at least 4 bytes aligned on my platform:
-
-auto* p = new int{};
-assert(is_aligned(p, 4ul)); // True
-
-In fact, new and malloc() are guaranteed to always return memory suitably aligned
-for any scalar type (if it manages to return memory at all).
-
-As follows is an example in which we allocate a block of heap memory that should
-occupy exactly one memory page. In this case, the alignment-aware versions of
-operator new() and operator delete() will be invoked when using new and delete:
-
-constexpr auto ps = std::size_t{4096}; // Page size
-struct alignas(ps) Page {
- std::byte data_[ps];
-};
-auto* page = new Page{}; // Memory page
-assert(is_aligned(page, ps)); // True
-// Use page ...
-delete page;
+  C++ allows us to separate memory allocation from object construction. We could, for
+  example, allocate a byte array with malloc() and construct a new User object in that
+  region of memory. Have a look at the following code snippet:
+  auto* memory = std::malloc(sizeof(User));
+  auto* user = ::new (memory) User("john");
+  The perhaps unfamiliar syntax that's using ::new (memory) is called placement new.
+  It is a non-allocating form of new, which only constructs an object. The double colon
+  (::) in front of new ensures that the resolution occurs from the global namespace to
+  avoid picking up an overloaded version of operator new.
+  In the preceding example, placement new constructs the User object and places
+  it at the specified memory location. Since we are allocating the memory with
+  std::malloc() for a single object, it is guaranteed to be correctly aligned (unless
+  the class User has been declared to be overaligned). Later on, we will explore cases
+  where we have to take alignment into account when using placement new.
+  There is no placement delete, so in order to destruct the object and free the memory,
+  we need to call the destructor explicitly and then free the memory:
+  user->~User();
+  std::free(memory);
 
 
-the compiler sometimes needs to add extra bytes, padding to our user defined types. when we define data members in a class or struct,the compiler is forced to place the members in the ame order as we define them
-however, the compiler also has to ensure that the data members inside the class have the correct alignment, hence it needs to add padding between data members if necessary
 
-*/
+  */
+
+  //memory alignment
+  /*
+  the cpu reads memory into its registers one word at a time.this is 64 bits or 32 bits depending on architecture
+  for the cpu to work efficiently with different data types, it has restrictions on the addresses where objects of different types are located
+  every type in C++ has an alignment requirement that defines the addresses that a object of a certain type should be located in memory
+
+  if the alignment of a type is 1, it means objects of that type can be located at any byte address
+  if the alignment of a type is 2, it means that the number of bytes between successive allowed addresses is 2
+  "An alignment is an implementation-defined integer value representing the number of bytes between successive addresses at which a given object can be allocated."
+  objects placed at aligned memory addresses can be read into registers by the cpu in an efficient way
+
+
+  we can check if an object is correctly aligned using std::align
+
+  It is possible to specify custom alignment requirements that are stricter than the
+  default alignment when declaring a variable using the alignas specifier. Let's say we
+  have a cache line size of 64 bytes and that we, for some reason, want to ensure that
+  two variables are placed on separate cache lines. We could do the following:
+  alignas(64) int x{};
+  alignas(64) int y{};
+  // x and y will be placed on different cache lines
+  It's also possible to specify a custom alignment when defining a type. The following
+  is a struct that will occupy exactly one cache line when being used:
+  struct alignas(64) CacheLine {
+   std::byte data[64];
+  };
+
+   if we want to write fully portable C++ code, we need to use std::align()
+  and not modulo to check the alignment of an object. std::align() is a function from
+  <memory> that will adjust a pointer according to an alignment that we pass as an
+  argument. If the memory address we pass to it is already aligned, the pointer will
+  not be adjusted. Therefore, we can use std::align() to implement a small utility
+  function called is_aligned(), as follows:
+
+  bool is_aligned(void* ptr, std::size_t alignment) {
+   assert(ptr != nullptr);
+   assert(std::has_single_bit(alignment)); // Power of 2
+   auto s = std::numeric_limits<std::size_t>::max();
+   auto aligned_ptr = ptr;
+   std::align(alignment, 1, aligned_ptr, s);
+   return ptr == aligned_ptr;
+  }
+  At first, we make sure that the ptr argument isn't null and that alignment is a power
+  of 2, which is stated as a requirement in the C++ standard. We are using C++20
+  std::has_single_bit() from the <bit> header to check this. Next, we are calling
+  std::align(). The typical use case for std::align() is when we have a memory
+  buffer of some size in which we want to store an object with some alignment
+  requirement. In this case, we don't have a buffer, and we don't care about the size of
+  the objects, so we say that the object is of size 1 and the buffer is the maximum value
+  of a std::size_t. Then, we can compare the original ptr and the adjusted aligned_
+  ptr to see if the original pointer was already aligned. We will have use for this utility
+  in the examples to come.
+  When allocating memory with new or std::malloc(), the memory we get back
+  should be correctly aligned for the type we specify. The following code shows that
+  the memory allocated for int is at least 4 bytes aligned on my platform:
+
+  auto* p = new int{};
+  assert(is_aligned(p, 4ul)); // True
+
+  In fact, new and malloc() are guaranteed to always return memory suitably aligned
+  for any scalar type (if it manages to return memory at all).
+
+  As follows is an example in which we allocate a block of heap memory that should
+  occupy exactly one memory page. In this case, the alignment-aware versions of
+  operator new() and operator delete() will be invoked when using new and delete:
+
+  constexpr auto ps = std::size_t{4096}; // Page size
+  struct alignas(ps) Page {
+   std::byte data_[ps];
+  };
+  auto* page = new Page{}; // Memory page
+  assert(is_aligned(page, ps)); // True
+  // Use page ...
+  delete page;
+
+
+  the compiler sometimes needs to add extra bytes, padding to our user defined types. when we define data members in a class or struct,the compiler is forced to place the members in the ame order as we define them
+  however, the compiler also has to ensure that the data members inside the class have the correct alignment, hence it needs to add padding between data members if necessary
+
+  */
 
 
 class Document {
@@ -659,7 +660,7 @@ class Document {
 
 // size of Document can be 24, this may be because the compiler adds padding for the bool and int, to fulfill the alignment requirements of the individual data members and the entire class
 
-/* The compiler converts the Document class into something 
+/* The compiler converts the Document class into something
 like this:
 class Document {
  bool is_cached_{};
@@ -689,20 +690,20 @@ class Document {
 // size of document is now 16 bytes, padding is only after is_cached
 // size of an object can change just by changing the order in which its members are declared
 
-/* As a general rule, you can place the biggest data members at the beginning and the 
-smallest members at the end. In this way, you can minimize the memory overhead 
-caused by padding. Later on, we will see that we need to think about alignment 
-when placing objects in memory regions that we have allocated, before we know 
+/* As a general rule, you can place the biggest data members at the beginning and the
+smallest members at the end. In this way, you can minimize the memory overhead
+caused by padding. Later on, we will see that we need to think about alignment
+when placing objects in memory regions that we have allocated, before we know
 the alignment of the objects that we are creating.
-From a performance perspective, there can also be cases where you want to align 
-objects to cache lines to minimize the number of cache lines an object spans over. 
-While we are on the subject of cache friendliness, it should also be mentioned that it 
-can be beneficial to place multiple data members that are frequently used together 
+From a performance perspective, there can also be cases where you want to align
+objects to cache lines to minimize the number of cache lines an object spans over.
+While we are on the subject of cache friendliness, it should also be mentioned that it
+can be beneficial to place multiple data members that are frequently used together
 next to each other.
-Keeping your data structures compact is important for performance. Many 
-applications are bound by memory access time. Another important aspect of memory 
-management is to never leak or waste memory for objects that are no longer needed. 
-We can effectively avoid all sorts of resource leaks by being clear and explicit about 
+Keeping your data structures compact is important for performance. Many
+applications are bound by memory access time. Another important aspect of memory
+management is to never leak or waste memory for objects that are no longer needed.
+We can effectively avoid all sorts of resource leaks by being clear and explicit about
 the ownership of resources. This is the topic of the following section.      */
 
 // Memory Ownership
@@ -716,7 +717,7 @@ the ownership of resources. This is the topic of the following section.      */
 
 auto func()
 {
-	std::vector<int> v {1, 2, 3, 4, 5};
+	std::vector<int> v{ 1, 2, 3, 4, 5 };
 }
 
 // here we use stack and dynamic memory
@@ -735,13 +736,13 @@ class RAIIConnection {
 public:
  explicit RAIIConnection(const std::string& url) : connection_{open_connection(url)} {}
  ~RAIIConnection() {
-      try {
-      close(connection_);
-       }
-       catch (const std::exception&) {
-        // Handle error, but never throw from a destructor
-       }
-    }
+	  try {
+	  close(connection_);
+	   }
+	   catch (const std::exception&) {
+		// Handle error, but never throw from a destructor
+	   }
+	}
  auto& get() { return connection_; }
 
  private:
@@ -761,24 +762,67 @@ weak: ill use the object if it exists, but dont keep it alove just for me
 */
 
 // unique pointer can only be owned by one entity, they can be moved but not copied
-auto owner { std::make_unique<std::string> ("Asad") };
+auto owner{ std::make_unique<std::string>("Asad") };
 auto new_owner{ std::move(owner) }; // move ownership to this new unique pointer
 
 // unique pointers are efficient since they add very little perfprmance overhead
-/* The slight overhead is incurred by the 
-fact that std::unique_ptr has a non-trivial destructor, which means that (unlike a 
-raw pointer) it cannot be passed in a CPU register when being passed to a function. 
+/* The slight overhead is incurred by the
+fact that std::unique_ptr has a non-trivial destructor, which means that (unlike a
+raw pointer) it cannot be passed in a CPU register when being passed to a function.
 This makes them slower than raw pointers */
 
 
 // shared pointer
+// shared pointer gets destroyed when the last object that owns it gets destroyed
+// std::shared_ptr uses reference counting to keep track of the number of owners, when this hits zero, the object is deleted
+// counter is stored in the shared_ptr object so it has more memory overhead than unique ptr, counter is incremented atomically, pointer is thread safe
+
+// recommended way to create shared pointers is through std::make_shared<T>
+// this only does one allocation instead of 2 and means code is more cache-friendly due to spatial locality
+
+// weak ownership doesnt keep any objects alive, it only allows us to use an object if someone else owns it
+/*
+One common reason for using a weak pointer is to break a reference
+cycle. A reference cycle occurs when two or more objects refer to each other using
+shared pointers. Even if all external std::shared_ptr constructors are gone, the
+objects are kept alive by referring to themselves.
+*/
+// weak pointers cannot reference the object unless it actually exists, which is not the case with a dangling raw pointer
+
+/*
+
+auto i = std::make_shared<int>(10);
+auto weak_i = std::weak_ptr<int>{i};
+// Maybe i.reset() happens here so that the int is deleted...
+if (auto shared_i = weak_i.lock()) {
+ // We managed to convert our weak pointer to a shared pointer
+ std::cout << *shared_i << '\n';
+}
+else {
+ std::cout << "weak_i has expired, shared_ptr was nullptr\n";
+}
+Whenever we try to use the weak pointer, we need to convert it into a shared
+pointer first using the member function lock(). If the object hasn't expired, the
+shared pointer will be a valid pointer to that object; otherwise, we will get an empty
+std::shared_ptr back. This way, we can avoid dangling pointers when using
+std::weak_ptr instead of raw pointers.
 
 
+use of dynamic memory for container objects that only contain a few small elements can hurt performance
+it is more efficient to keep the elements in the container itself and only use stack memory instead of allocating small regions of memory on the heap
+std::string takes advantage of the fact that most strings are short and therefore more efficient to handle without the use of heap memory
+One alternative is to keep a small separate buffer in the string class itself, which can
+be used when the string's content is short. This would increase the size of the string
+class, even when the short buffer is not used.
+So, a more memory-efficient solution is to use a union, which can hold a short buffer
+when the string is in short mode and, otherwise, hold the data members it needs to
+handle a dynamically allocated buffer. The technique for optimizing a container for
+handling small data is usually referred to as small string optimization for strings,
+or small object optimization and small buffer optimization for other types. W
 
+a string of 22 chars or less is allocated on the stack
 
-
-
-
+*/
 
 
 
