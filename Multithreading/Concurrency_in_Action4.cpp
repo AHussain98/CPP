@@ -408,6 +408,15 @@ must be paired up. The value stored by a release operation must be seen by an ac
 operation for either to have any effect. If either the store or the load was a
 relaxed operation, there’d be no ordering on the accesses to x, so there’d be no guarantee that the load would read true, and the assert could fire.*/
 
+/*
+Release-Acquire ordering
+If an atomic store in thread A is tagged memory_order_release, an atomic load in thread B from the same variable is tagged memory_order_acquire, and the load in thread B reads a value written by the store in thread A, then the store in thread A synchronizes-with the load in thread B.
+
+All memory writes (including non-atomic and relaxed atomic) that happened-before the atomic store from the point of view of thread A, become visible side-effects in thread B. That is, once the atomic load is completed, thread B is guaranteed to see everything thread A wrote to memory. This promise only holds if B actually returns the value that A stored, or a value from later in the release sequence.
+
+The synchronization is established only between the threads releasing and acquiring the same atomic variable. Other threads can see different order of memory accesses than either or both of the synchronized threads.
+*/
+
 // acquire release ordering can be used to synchronse data across several threads, even when intermediate threads haven't touched the data
 
 // to think about transitive ordering, we need three threads.
