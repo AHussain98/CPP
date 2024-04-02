@@ -253,6 +253,10 @@ In practice, then using std::memory_order_seq_cst everywhere will add additional
 // this constraint doesnt carry forward for relaxed memory ordering, so sequentially consistent must be used everywhere to get teh benefit
 // from the point of view of synchronisation, a sequentially consistent store synchronises with a sequentially consistent load of the same variable that reads the value stored
 // this provides one ordering constraint on the operation of two or more threads, and any sequentially consistent atomic operations done after that load must also appear after the store to other threads in the system using sequentially consistent atomic operations
+// in summary: A load operation with this memory order performs an acquire operation, a store performs a release operation, and read-modify-write performs both an acquire operation and a release operation, plus a single total order exists in which all threads observe all modifications in the same order
+
+
+
 
 
 std::atomic<bool> x, y;
@@ -415,6 +419,15 @@ If an atomic store in thread A is tagged memory_order_release, an atomic load in
 All memory writes (including non-atomic and relaxed atomic) that happened-before the atomic store from the point of view of thread A, become visible side-effects in thread B. That is, once the atomic load is completed, thread B is guaranteed to see everything thread A wrote to memory. This promise only holds if B actually returns the value that A stored, or a value from later in the release sequence.
 
 The synchronization is established only between the threads releasing and acquiring the same atomic variable. Other threads can see different order of memory accesses than either or both of the synchronized threads.
+
+memory_order_release: A store operation with this memory order performs the release operation: no reads or writes in the current thread can be reordered after this store. All writes in the current thread are visible in other threads that acquire the same atomic variable (see Release-Acquire ordering below) and writes that carry a dependency into the atomic variable become visible in other threads that consume the same atomic.
+so basically everything before the release cannot be reordered in the thread and all of those memory accesses before the release are visible to the thread that acquires
+
+memory_order_acquire: A load operation with this memory order performs the acquire operation on the affected memory location: no reads or writes in the current thread can be reordered before this load. All writes in other threads that release the same atomic variable are visible in the current thread
+this is the other half of release, the acquireing thread sees all the memory accesses of the releasing thread, and all memory accesses after this acquire operation cannot be reordered.
+
+with the release/acquire thread pair , these memory orderings are only visible between the pair. All other threads have their own idea of the orderings.
+
 */
 
 // acquire release ordering can be used to synchronse data across several threads, even when intermediate threads haven't touched the data
