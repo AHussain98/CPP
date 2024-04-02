@@ -11,7 +11,7 @@
 // whatever its type, an object is stored in one or more memory locations
 /* Each memory location is either an object (or sub-object) of a scalar type such as unsigned short
 or my_class* or a sequence of adjacent bit fields. If you use bit fields, this is an
-important point to note: though adjacent bit fields are distinct objects, theyíre still
+important point to note: though adjacent bit fields are distinct objects, they‚Äôre still
 counted as the same memory location.*/
 
 // every variable is an object, including those that are members of other objects
@@ -21,9 +21,9 @@ counted as the same memory location.*/
 
 // in multithreaded applications, everything hinges on these memory locations
 /* . If two threads access separate memory locations,
-thereís no problem: everything works fine. On the other hand, if two threads access
+there‚Äôs no problem: everything works fine. On the other hand, if two threads access
 the same memory location, then you have to be careful. If neither thread is updating
-the memory location, youíre fine; read-only data doesnít need protection or synchronization. If either thread is modifying the data, thereís a potential for a race condition,*/
+the memory location, you‚Äôre fine; read-only data doesn‚Äôt need protection or synchronization. If either thread is modifying the data, there‚Äôs a potential for a race condition,*/
 
 // one way to ensure a defined ordering is to use mutexes, the other is to use synchronisation properties of atomic operations, either on the same or other memory locations to enforce an ordering between the accesses in the two threads
 // if more than two threads access the same memory location, each pair of threads must have a defined ordering
@@ -75,13 +75,13 @@ and the read and opening the door for a race condition.  */
 
 std::atomic_flag f{ ATOMIC_FLAG_INIT };
 
-/* You canít copy-construct another std::atomic_flag object from the first, and
-you canít assign one std::atomic_flag to another. This isnít something peculiar to
+/* You can‚Äôt copy-construct another std::atomic_flag object from the first, and
+you can‚Äôt assign one std::atomic_flag to another. This isn‚Äôt something peculiar to
 std::atomic_flag but something common with all the atomic types. All operations on
 an atomic type are defined as atomic, and assignment and copy-construction involve two
-objects. A single operation on two distinct objects canít be atomic. In the case of copyconstruction or copy-assignment, the value must first be read from one object and then
+objects. A single operation on two distinct objects can‚Äôt be atomic. In the case of copyconstruction or copy-assignment, the value must first be read from one object and then
 written to the other. These are two separate operations on two separate objects, and the
-combination canít be atomic. Therefore, these operations arenít permitted.*/
+combination can‚Äôt be atomic. Therefore, these operations aren‚Äôt permitted.*/
 
 // the most basic of the atomic integral types is std::atomic<bool>
 // its still not copy constructible or copy assignable, and can be constructed from a non-atomic bool, so it can be initially true or false, and you can also assign to instances of std::atomic<bool> from a non-atomic bool
@@ -112,13 +112,13 @@ check whether operations on std::atomic<bool> are lock-free. This is another fea
 // atomic pointer is std::atomic<T*>
 // behaves same as the bool but also has pointer aruthmeic operations
 // fetch_add and fetch_sub member functions do atomic addition and subtraction on the stored address
-/* The operators work as youíd expect
+/* The operators work as you‚Äôd expect
 from the built-in types: if x is std::atomic<Foo*> to the first entry of an array of Foo
 objects, then x+=3 changes it to point to the fourth entry and returns a plain Foo* that
 also points to that fourth entry. fetch_add() and fetch_sub() are slightly different in
 that they return the original value (so x.fetch_add(3) will update x to point to the
 fourth value but return a pointer to the first value in the array). This operation is also
-known as exchange-and-add, and itís an atomic read-modify-write operation, like
+known as exchange-and-add, and it‚Äôs an atomic read-modify-write operation, like
 exchange() and compare_exchange_weak()/compare_exchange_strong(). As with
 the other operations, the return value is a plain T* value rather than a reference to the
 std::atomic<T*> object, so that the calling code can perform actions based on what
@@ -193,7 +193,7 @@ void writer_thread()
 /*
 There are circumstances where operations within a single statement are sequenced,
 such as where the built-in comma operator is used or where the result of one expression is used as an argument to another expression. But in general, operations within a
-single statement are nonsequenced, and thereís no sequenced-before (and thus no
+single statement are nonsequenced, and there‚Äôs no sequenced-before (and thus no
 happens-before) relationship between them. All operations in a statement happen
 before all of the operations in the next statement.
 */
@@ -203,6 +203,22 @@ before all of the operations in the next statement.
 
 // there are 6 memory ordering options that can be applied to operations on atomic types: relaxed, consume, acquire, release, acq_rel, seq_cst
 // unlesss specified otherwise, all operations on atomic are sequential consistent by default
+
+/*
+The std::memory_order values allow you to specify fine-grained constraints on the memory ordering provided by your atomic operations. If you are modifying and accessing atomic variables from multiple threads, then passing the std::memory_order values to your operations allow you to relax the constraints on the compiler and processor about the order in which the operations on those atomic variables become visible to other threads, and the synchronization effects those operations have on the non-atomic data in your application.
+
+The default ordering of std::memory_order_seq_cst is the most constrained, and provides the "intuitive" properties you might expect: if thread A stores some data and then sets an atomic flag using std::memory_order_seq_cst, then if thread B sees the flag is set then it can see that data written by thread A. The other memory ordering values do not necessarily provide this guarantee, and must therefore be used very carefully.
+
+The basic premise is: do not use anything other than std::memory_order_seq_cst (the default) unless (a) you really really know what you are doing, and can prove that the relaxed usage is safe in all cases, and (b) your profiler demonstrates that the data structure and operations you are intending to use the relaxed orderings with are a bottleneck.
+
+These memeory orderings provide loosenings of restrictions within a thread, and also in threads views of each other
+seq_cst means nothing that comes after the atomic operation can come before, and nothing that comes before can be reordered after
+this concerns normal memory accesses, not just atomic ones!
+
+*/
+
+
+
 
 /* The C++11 memory ordering parameters for atomic operations specify constraints on the ordering. If you do a store with std::memory_order_release, and a load from another thread reads the value with std::memory_order_acquire then subsequent read operations from the second thread will see any values stored to any memory location by the first thread that were prior to the store-release, or a later store to any of those memory locations.
 
@@ -276,11 +292,11 @@ void read_y_then_x()
 // both loads could also return trye in which case z is 2
 // but under no circumstances can z be zero
 
-/*Architects and programming language designers believe the rules we just explored to be intuitive to programmers. The idea is that multiple threads running in parallel are manipulating a single main memory, and so everything must happen in order. Thereís no notion that two events can occur ìat the same timeî, because they are all accessing a single main memory.
+/*Architects and programming language designers believe the rules we just explored to be intuitive to programmers. The idea is that multiple threads running in parallel are manipulating a single main memory, and so everything must happen in order. There‚Äôs no notion that two events can occur ‚Äúat the same time‚Äù, because they are all accessing a single main memory.
 
-Note that this rule says nothing about what order the events happen inójust that they happen in some order. The other part of this intuitive model is that events happen in program order: the events in a single thread happen in the order in which they were written. This is what programmers expect: all sorts of bad things would start happening if my programs were allowed to launch their missiles before checking that the key was turned.
+Note that this rule says nothing about what order the events happen in‚Äîjust that they happen in some order. The other part of this intuitive model is that events happen in program order: the events in a single thread happen in the order in which they were written. This is what programmers expect: all sorts of bad things would start happening if my programs were allowed to launch their missiles before checking that the key was turned.
 
-Together, these two rulesóa single main memory, and program orderódefine sequential consistency.*/
+Together, these two rules‚Äîa single main memory, and program order‚Äîdefine sequential consistency.*/
 
 
 // on a multiprocessor system, squential consistency may require extensive nd time consuming communicatio between processors
@@ -291,7 +307,7 @@ Together, these two rulesóa single main memory, and program orderódefine sequent
 // operations on atomic types performed with relaxed ordering don't participate in synchronises-with relationships
 // operations on the same variable within a single thread still obey the happens-before relationship, but theres almost no requirement on ordering relative to other threads
 /*The only requirement is that accesses to a single atomic
-variable from the same thread canít be reordered; once a given thread has seen a particular value of an atomic variable, a subsequent read by that thread canít retrieve
+variable from the same thread can‚Äôt be reordered; once a given thread has seen a particular value of an atomic variable, a subsequent read by that thread can‚Äôt retrieve
 an earlier value of the variable. Without any additional synchronization, the modification order of each variable is the only thing shared between threads that are using
 memory_order_relaxed.*/
 
@@ -385,12 +401,12 @@ void read_y3_then_x3()
 // the store to x3 happens before the store to y3, because they're in the same thread
 // because the store to y synchronises with the load from y, the store to x also happens before the load from y and by extension happens before the load from x
 // thus the load from x must read true and the assert cannot fire
-/*If the load from y wasnít in a while loop, this wouldnít necessarily be the case; the
-load from y might read false, in which case thereíd be no requirement on the value
+/*If the load from y wasn‚Äôt in a while loop, this wouldn‚Äôt necessarily be the case; the
+load from y might read false, in which case there‚Äôd be no requirement on the value
 read from x. In order to provide any synchronization, acquire and release operations
 must be paired up. The value stored by a release operation must be seen by an acquire
 operation for either to have any effect. If either the store or the load was a
-relaxed operation, thereíd be no ordering on the accesses to x, so thereíd be no guarantee that the load would read true, and the assert could fire.*/
+relaxed operation, there‚Äôd be no ordering on the accesses to x, so there‚Äôd be no guarantee that the load would read true, and the assert could fire.*/
 
 // acquire release ordering can be used to synchronse data across several threads, even when intermediate threads haven't touched the data
 
@@ -399,7 +415,7 @@ relaxed operation, thereíd be no ordering on the accesses to x, so thereíd be no
 // a second thread then reads the variable subject to the store-release with a load-acquire and performs a store-release on a second shared variable
 // Finally, a third thread does a load-acquire on that second shared variable
 /*  Provided that the load-acquire operations see the values written by the store-release operations to ensure the synchronizeswith relationships, this third thread can read the values of the other variables stored
-by the first thread, even if the intermediate thread didnít touch any of them. This scenario is shown in the next listing.*/
+by the first thread, even if the intermediate thread didn‚Äôt touch any of them. This scenario is shown in the next listing.*/
 
 std::atomic<int> data[5];
 std::atomic<bool> sync1{ false }, sync2{ false };
@@ -515,25 +531,25 @@ void consume_queue_items()
 one way to handle things would be to have the thread that's producing the data store the items in a shared buffer and then store in count to let other threads know that data is available
 the threads consuming the queue items can do fetch_sub to claim an item from the queue
 once count becomes zero, there are no more items and the thread must wait
- If thereís one consumer thread, this is fine; fetch_sub() is a read with memory
+ If there‚Äôs one consumer thread, this is fine; fetch_sub() is a read with memory
 _order_acquire semantics, and the store had memory_order_release semantics, so
 the store synchronizes with the load and the thread can read the item from the buffer.
 If there are two threads reading, the second fetch_sub() will see the value written by
 the first and not the value written by the store. Without the rule about the release
-sequence, this second thread wouldnít have a happens-before relationship with the
-first thread, and it wouldnít be safe to read the shared buffer unless the first fetch_
+sequence, this second thread wouldn‚Äôt have a happens-before relationship with the
+first thread, and it wouldn‚Äôt be safe to read the shared buffer unless the first fetch_
 sub() also had memory_order_release semantics, which would introduce unnecessary
 synchronization between the two consumer threads. Without the release sequence
 rule or memory_order_release on the fetch_sub operations, there would be nothing
 to require that the stores to the queue_data were visible to the second consumer, and
 you would have a data race. Thankfully, the first fetch_sub() does participate in the
 release sequence, and so the store() synchronizes with the second fetch_sub().
-Thereís still no synchronizes-with relationship between the two consumer threads.
-There can be any number of links in the chain, but provided theyíre all readmodify-write operations such as fetch_sub(), the store() will still synchronize with
-each one thatís tagged memory_order_acquire. In this example, all the links are the
+There‚Äôs still no synchronizes-with relationship between the two consumer threads.
+There can be any number of links in the chain, but provided they‚Äôre all readmodify-write operations such as fetch_sub(), the store() will still synchronize with
+each one that‚Äôs tagged memory_order_acquire. In this example, all the links are the
 same, and all are acquire operations, but they could be a mix of different operations
 with different memory-ordering semantics.
- Although most of the synchronization relationships come from the memoryordering semantics applied to operations on atomic variables, itís also possible to
+ Although most of the synchronization relationships come from the memoryordering semantics applied to operations on atomic variables, it‚Äôs also possible to
 introduce additional ordering constraints by using fences
 */
 
@@ -589,7 +605,7 @@ release fence, the release fence synchronizes with the acquire fence*/
 
 // important note, the synchronisation point is the fence itself
 /* Although the fence synchronization depends on the values read or written by
-operations before or after the fence, itís important to note that the synchronization
+operations before or after the fence, it‚Äôs important to note that the synchronization
 point is the fence itself. If you take write_x_then_y from listing 5.12 and move the
 write to x after the fence as follows, the condition in the assert is no longer guaranteed
 to be true, even though the write to x comes before the write to y:
@@ -601,8 +617,8 @@ void write_x_then_y()
  y.store(true,std::memory_order_relaxed); 
 }
 These two operations are no longer separated by the fence and so are no longer
-ordered. Itís only when the fence comes between the store to x and the store to y that
-it imposes an ordering. The presence or absence of a fence doesnít affect any
+ordered. It‚Äôs only when the fence comes between the store to x and the store to y that
+it imposes an ordering. The presence or absence of a fence doesn‚Äôt affect any
 enforced orderings on happens-before relationships that exist because of other
 atomic operations.
 */
