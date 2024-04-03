@@ -8,6 +8,28 @@
 # include <ranges>
 # include <memory>
 
+// Big O notation expresses the runtime of an algorithm as a function of a given input of size n
+// if runtime grows linearly with size of input then complexity is O(N)
+/*
+Constant O(1) The runtime is independent of the number of elements.
+Logarithmic O(log(n)) The runtime grows logarithmically with respect to the number of
+elements.
+Linear O(n) The runtime grows linearly (with the same factor) as the number of elements grows.
+n-log-n O(n ∗ log(n)) The runtime grows as a product of linear and logarithmic complexity.
+Quadratic O(n2) The runtime grows quadratically with respect to the number of elements.
+
+Some complexity definitions in the C++ reference manual are specified as amortized. This means
+that the operations in the long term behave as described. However, a single operation may take
+longer than specified. For example, if you append elements to a dynamic array, the runtime depends
+on whether the array has enough memory for one more element. If there is enough memory, the
+complexity is constant because inserting a new last element always takes the same time. However, if
+there is not enough memory, the complexity is linear because, depending on the number of elements,
+you have to allocate new memory and copy all elements. Reallocations are rather rare, so any
+sufficiently long sequence of that operation behaves as if each operation has constant complexity.
+Thus, the complexity of the insertion is “amortized” constant time.
+
+*/
+
 // initialisation can happen via parenthesis, braces or assignment operator
 // braces can be used everywhere, use them
 
