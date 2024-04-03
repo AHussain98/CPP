@@ -243,11 +243,93 @@ does it make sense to program allocators. In practice, the default allocator is 
 
 
 // cpp exceptions:
+// exceptions provide a way to react to exceptional circumstances like runtime errors by transferring control to special functions called handlers
+// this is done via try catch block
+// exceptions thrown by throw keyword, handlers declared with catch keyword
+// multiple catch blocks can be chained with different paraneter types
+/*
+Only the handler whose argument type matches the type of the exception specified in the throw statement is executed.
+
+If an ellipsis (...) is used as the parameter of catch, that handler will catch any exception no matter what the type of the exception thrown. This can be used as a default handler that catches all exceptions not caught by other handlers:
+
+try {
+  // code here
+}
+catch (int param) { cout << "int exception"; }
+catch (char param) { cout << "char exception"; }
+catch (...) { cout << "default exception"; }
+
+In this case, the last handler would catch any exception thrown of a type that is neither int nor char.
+
+After an exception has been handled the program, execution resumes after the try-catch block, not after the throw statement!.
+
+It is also possible to nest try-catch blocks within more external try blocks. In these cases, we have the possibility that an internal catch block forwards the exception to its external level. This is done with the expression throw; with no arguments. For example:
+
+try {
+  try {
+	  // code here
+  }
+  catch (int n) {
+	  throw;
+  }
+}
+catch (...) {
+  cout << "Exception occurred";
+}
+
+The C++ Standard library provides a base class specifically designed to declare objects to be thrown as exceptions. It is called std::exception and is defined in the <exception> header. This class has a virtual member function called what that returns a null-terminated character sequence (of type char *) and that can be overwritten in derived classes to contain some sort of description of the exception.
+
+// using standard exceptions
+#include <iostream>
+#include <exception>
+using namespace std;
+
+class myexception: public exception
+{
+  virtual const char* what() const throw()
+  {
+	return "My exception happened";
+  }
+} myex;
+
+int main () {
+  try
+  {
+	throw myex;
+  }
+  catch (exception& e)
+  {
+	cout << e.what() << '\n';
+  }
+  return 0;
+}
+My exception happened.
+
+We have placed a handler that catches exception objects by reference (notice the ampersand & after the type), therefore this catches also classes derived from exception, like our myex object of type myexception.
+
+All exceptions thrown by components of the C++ Standard library throw exceptions derived from this exception class.
+
+A typical example where standard exceptions need to be checked for is on memory allocation:
+
+// bad_alloc standard exception
+
+int main () {
+  try
+  {
+	int* myarray= new int[1000];
+  }
+  catch (exception& e)
+  {
+	cout << "Standard exception: " << e.what() << endl;
+  }
+  return 0;
+}
+
+The exception that may be caught by the exception handler in this example is a bad_alloc. Because bad_alloc is derived from the standard base class exception, it can be caught (capturing by reference, captures all related classes).
 
 
 
-
-
+*/
 
 int main()
 {
@@ -255,4 +337,13 @@ int main()
 
 	std::vector<int> vec{ 1,2,3,4,5 };
 	printElements(vec);
+
+	try {
+		throw 20;  // throw expression accepts one parameter
+	}
+	catch (int a)  // catch is declared like a regular function
+	{
+		std::cout << "caught the integer exception" << std::endl;
+	}
+
 }
