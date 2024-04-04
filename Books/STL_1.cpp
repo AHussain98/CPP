@@ -346,7 +346,7 @@ The exception that may be caught by the exception handler in this example is a b
 // appending and removing elements at the end of the array is very fast
 //  However, inserting an element in the middle or at the beginning of the array takes time because all the following elements have to be moved to make room for it while maintaining the order.
 /*
-Strictly speaking, appending elements is amortized very fast. An individual append may be slow when a vector has to reallocate new memory and to copy existing elements into the new memory. 
+Strictly speaking, appending elements is amortized very fast. An individual append may be slow when a vector has to reallocate new memory and to copy existing elements into the new memory.
 However, because such reallocations are rather rare, the operation is very fast in the long term.
 
 */
@@ -379,7 +379,7 @@ resizing a list is poor performance because resize() is used to change the numbe
 additional parameter to specify the value of the new elements. Otherwise, the default value (zero for
 fundamental types) is used. Calling resize() is really an expensive operation here. It has
 linear complexity because to reach the end, you have to go element-by-element through the whole
-list. 
+list.
 
 */
 
@@ -410,7 +410,7 @@ may occur only once, so duplicates are not allowed.
 multiple elements that have the same value.
 • A map contains elements that are key/value pairs. Each element has a key that is the basis for the
 sorting criterion and a value. Each key may occur only once, so duplicate keys are not allowed.
-A map can also be used as an associative array, an array that has an arbitrary index type 
+A map can also be used as an associative array, an array that has an arbitrary index type
 • A multimap is the same as a map except that duplicates are allowed. Thus, a multimap may
 contain multiple elements that have the same key. A multimap can also be used as dictionary.
 
@@ -477,7 +477,7 @@ there's also cbegin() and cend()
 
 You should always prefer a member function over an algorithm if good performance is the goal.
 
-elements of containers must meet certain requirements because containers handle them in a special way. 
+elements of containers must meet certain requirements because containers handle them in a special way.
 the elements in the stl containers must meet the fundamental requirements (exception will be thrown if a container object tried to do something and the custom type doesn't have the required function defined, but its not an error initially):
 
 1. An element must be copyable or movable. Thus, an element type implicitly or explicitly has to
@@ -501,7 +501,7 @@ with no hint of the values those new elements should have. These elements are cr
 any arguments by calling the default constructor of their type.
 • For several operations, the test of equality with operator == must be defined and is especially
 needed when elements are searched. For unordered containers, however, you can provide your
-own definition of equivalence if the elements do not support operator == 
+own definition of equivalence if the elements do not support operator ==
 • For associative containers, the operations of the sorting criterion must be provided by the elements. By default, this is the operator <, which is called by the less<> function object.
 • For unordered containers, a hash function and an equivalence criterion must be provided for the
 elements
@@ -597,7 +597,55 @@ to avoid error checking to get better performance For example, when every subscr
 checks whether a range is valid, you can’t write your own subscripts without checking. However,
 it is possible the other way around.
 
+if indexes, iterators or ranges are not valid, the result is undefined
 
+• Iterators must be valid. For example, they must be initialized before they are used. Note that
+iterators may become invalid as a side effect of other operations. In particular, iterators become
+invalid
+– for vectors and deques, if elements are inserted or deleted or reallocation takes place, and
+– for unordered containers, if rehashing takes place (which also might be the result of an insertion).
+• Iterators that refer to the past-the-end position have no element to which to refer. Thus, calling
+operator * or operator -> is not allowed. This is especially true for the return values of the end(),
+cend(), and rend() container member functions.
+• Ranges must be valid:
+– Both iterators that specify a range must refer to the same container.
+– The second iterator must be reachable from the first iterator.
+• If more than one source range is used, the second and later ranges usually must have at least as
+many elements as the first one.
+• Destination ranges must have enough elements that can be overwritten; otherwise, insert iterators
+must be used.
+
+ there are only two function calls for which the
+standard requires that it might cause an exception directly: the at() member function, which is the
+checked version of the subscript operator, and reserve() if the passed size of elements exceeds
+max_size(). Other than that, the standard requires that only the usual standard exceptions may
+occur, such as bad_alloc for lack of memory or exceptions of user-defined operations.
+
+the C++ standard library now guarantees the following:
+• In general, no erase(), clear(), pop_back(), pop_front(), or swap() function throws an
+exception. Also, no copy constructor or assignment operator of a returned iterator throws an
+exception.
+• For all node-based containers (lists, forward lists, sets, multisets, maps, and multimaps), including the unordered containers, any failure to construct a node simply leaves the container as
+it was. Furthermore, removing a node can’t fail, provided that destructors don’t throw. However, for multiple-element insert operations of associative containers, the need to keep elements
+sorted makes full recovery from throws impractical. Thus, all single-element insert operations
+of associative and unordered containers support commit-or-rollback behavior, provided that the
+hash function for unordered containers does not throw. That is, the single-element insert operations either succeed or have no effect. In addition, it is guaranteed that all erase operations for
+both single and multiple elements always succeed, provided that the container’s compare or hash
+function does not throw.
+For lists, even multiple-element insert operations are transaction safe. In fact, all list operations except remove(), remove_if(), merge(), sort(), and unique() either succeed or have
+no effect. For some of the exceptional operations, the C++ standard library provides conditional
+guarantees. Thus, if you need a transaction-safe container, you should use a list.
+For forward lists, insert_after(), emplace_after(), and push_front() are transaction safe.17
+• All array-based containers (arrays, vectors, and deques) do not fully recover when an element
+gets inserted. To do this, they would have to copy all subsequent elements before any insert
+operation, and handling full recovery for all copy operations would take quite a lot of time.
+However, push and pop operations that operate at the end do not require that existing elements
+get copied. If they throw, it is guaranteed that they have no effect. Furthermore, if elements have
+a type with copy operations (copy constructor and assignment operator) that do not throw, every
+container operation for these elements either succeeds or has no effect.
+Note that all these guarantees are based on the requirement that destructors never throw, which
+should always be the case in C++. The C++ standard library makes this promise, and so must the
+application programmer
 
 */
 
