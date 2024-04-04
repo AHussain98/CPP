@@ -331,6 +331,288 @@ The exception that may be caught by the exception handler in this example is a b
 
 */
 
+
+// sequence containers (ordered based on entry) : list, forward list, array, deque, vector
+// associative constainers (sorted collections, position depends on key or value) : set, map
+// unordered associative containers : unordered set, unordered map
+
+// sequence containers usually implemented as arrays or linked lists
+// associative containers usually implemented as binary trees
+// unordered containers usually implemented as hash tables
+
+// associative contains sort elements automatically upon entry and searching for an element is always logarithmic complexity. They are designed for easy fast searching
+
+// vectors manage elements in a dynamic array, enable random access which means we can access any element quickly via index
+// appending and removing elements at the end of the array is very fast
+//  However, inserting an element in the middle or at the beginning of the array takes time because all the following elements have to be moved to make room for it while maintaining the order.
+/*
+Strictly speaking, appending elements is amortized very fast. An individual append may be slow when a vector has to reallocate new memory and to copy existing elements into the new memory. 
+However, because such reallocations are rather rare, the operation is very fast in the long term.
+
+*/
+
+
+// deque is double ended queue
+// dynamic array that can add and remove elements quickly at the front and back
+// inserting elements in the middle takes time because elements must be moved
+
+// arrays manage elements in a static fixed size sequential container
+// arrays enable random access via index
+
+// list is implemented as a double linked list of elements. each element has its own segment of memory and refers to its predecessor and its successor
+// lists do not provide random access, you have to access each element sequentially. general access to an arbitrary element takes linear time because distance is proportional to the number of elements
+// this is much worse than the amortised constant time provided by vectors and dequeues
+// the advantage of a list is that insertion or removal of an element is fast at any position, only the links must be changed
+// moving an element in the middle of the list is much faster than a vector or deque
+// lists do not provide [] operator, no random access as this would have bad performance
+
+// forward list is a singly linked list of elements
+/*
+// create forward-list container for some prime numbers
+forward_list<long> coll = { 2, 3, 5, 7, 11, 13, 17 };
+// resize two times
+// - note: poor performance
+coll.resize(9);
+coll.resize(10,99);
+
+resizing a list is poor performance because resize() is used to change the number of elements. If the size grows, you can pass an
+additional parameter to specify the value of the new elements. Otherwise, the default value (zero for
+fundamental types) is used. Calling resize() is really an expensive operation here. It has
+linear complexity because to reach the end, you have to go element-by-element through the whole
+list. 
+
+*/
+
+
+// associative containers sort elements automatically according to certain criteria
+// by default, the containers compare the elements or the keys with operator <, we can supply our own comparison function
+/*
+All these associative container classes have an optional template argument for the sorting criterion.
+The default sorting criterion is the operator <. The sorting criterion is also used as the test for
+equivalence; that is, two elements are duplicates if neither of their values/keys is less than the other.
+*/
+
+
+/*
+Associative containers are typically implemented as binary trees. Thus, every element (every
+node) has one parent and two children. All ancestors to the left have lesser values; all ancestors to
+the right have greater values. The associative containers differ in the kinds of elements they support
+and how they handle duplicates.
+The major advantage of associative containers is that finding an element with a specific value
+is rather fast because it has logarithmic complexity (in all sequence containers, you have linear
+complexity). Thus, when using associative containers, with 1,000 elements you have 10 instead of
+500 comparisons on average. However, a drawback is that you can’t modify values directly, because
+doing so would corrupt the automatic sorting of the elements.
+The following associative containers are predefined in the STL:
+• A set is a collection in which elements are sorted according to their own values. Each element
+may occur only once, so duplicates are not allowed.
+• A multiset is the same as a set except that duplicates are allowed. Thus, a multiset may contain
+multiple elements that have the same value.
+• A map contains elements that are key/value pairs. Each element has a key that is the basis for the
+sorting criterion and a value. Each key may occur only once, so duplicate keys are not allowed.
+A map can also be used as an associative array, an array that has an arbitrary index type 
+• A multimap is the same as a map except that duplicates are allowed. Thus, a multimap may
+contain multiple elements that have the same key. A multimap can also be used as dictionary.
+
+a set can be thought of as a map where the key and value is the same
+
+maps deal with key/value pairs. The type of each element in a map is pair<const key, value>
+The key is constant because any modification of its value would break the order of the elements,
+which are automatically sorted by the container. Because pairs don’t have an output operator,
+you can’t print them as a whole. Instead, you must access the members of the pair structure,
+which are called first and second.
+
+
+*/
+
+
+/*
+
+unordered containers have elements in no particular order. it can be thought of like a bag
+unordered containers are typically implemented as a hash table
+internally, the container is an array of linked lists. using a hash function, the position of an element in the array gets processed
+ The goal is that each element has its own position so that you have fast access to
+each element, provided that the hash function is fast. But because such a fast perfect hash function
+is not always possible or might require that the array consumes a huge amount of memory, multiple
+elements might have the same position. For this reason, the elements in the array are linked lists so
+that you can store more than one element at each array position.
+The major advantage of unordered containers is that finding an element with a specific value
+is even faster than for associative containers. In fact, the use of unordered containers provides
+amortized constant complexity, provided that you have a good hash function. However, providing a
+good hash function is not easy, and you might need a lot of memory
+for the buckets
+
+All these unordered container classes have a couple of optional template arguments to specify a hash
+function and an equivalence criterion. The equivalence criterion is used to find specific values and
+to identify duplicates. The default equivalence criterion is the operator ==.
+You can consider an unordered set as a special kind of unordered map, in which the value is
+identical to the key. In fact, all these unordered container types are usually implemented by using
+the same basic implementation of a hash table.
+
+the key is const, it cant be changed. The element can be modified however
+
+range based for loops use iterators under the hood to iterate over all elements
+
+An iterator is an object that can iterate over elements (navigate from element to element). These
+elements may be all or a subset of the elements of an STL container. An iterator represents a certain
+position in a container. The following fundamental operations define the behavior of an iterator:
+• Operator * returns the element of the current position. If the elements have members, you can
+use operator -> to access those members directly from the iterator.
+• Operator ++ lets the iterator step forward to the next element. Most iterators also allow stepping
+backward by using operator --.
+• Operators == and != return whether two iterators represent the same position.
+• Operator = assigns an iterator (the position of the element to which it refers).
+
+
+All container classes provide the same basic member functions that enable them to use iterators
+to navigate over their elements. The most important of these functions are as follows:
+
+• begin() returns an iterator that represents the beginning of the elements in the container. The
+beginning is the position of the first element, if any.
+
+• end() returns an iterator that represents the end of the elements in the container. The end is the
+position behind the last element. Such an iterator is also called a past-the-end iterator.
+
+there's also cbegin() and cend()
+
+You should always prefer a member function over an algorithm if good performance is the goal.
+
+elements of containers must meet certain requirements because containers handle them in a special way. 
+the elements in the stl containers must meet the fundamental requirements (exception will be thrown if a container object tried to do something and the custom type doesn't have the required function defined, but its not an error initially):
+
+1. An element must be copyable or movable. Thus, an element type implicitly or explicitly has to
+provide a copy or move constructor. A generated copy should be equivalent to the source. This means that any test for equality
+returns that both are equal and that both source and copy behave the same.
+
+2. An element must be (move) assignable by the assignment operator. Containers and algorithms
+use assignment operators to overwrite old elements with new elements.
+
+3. An element must be destroyable by a destructor. Containers destroy their internal copies of
+elements when these elements are removed from the container. Thus, the destructor must not be
+private. Also, as usual in C++, a destructor must not throw; otherwise, all bets are off.
+
+These three operations are generated implicitly for any class. Thus, a class meets the requirements
+automatically, provided that no special versions of these operations are defined and no special members disable the sanity of those operations.
+
+
+• For some member functions of sequence containers, the default constructor must be available.
+For example, it is possible to create a nonempty container or increase the number of elements
+with no hint of the values those new elements should have. These elements are created without
+any arguments by calling the default constructor of their type.
+• For several operations, the test of equality with operator == must be defined and is especially
+needed when elements are searched. For unordered containers, however, you can provide your
+own definition of equivalence if the elements do not support operator == 
+• For associative containers, the operations of the sorting criterion must be provided by the elements. By default, this is the operator <, which is called by the less<> function object.
+• For unordered containers, a hash function and an equivalence criterion must be provided for the
+elements
+
+
+usually, all containers create internal copies of their elements and return copies of those elements
+this means that container elements are equal but not identical to the objects you put into the container
+if you modify objects as elements of the container, you modify a copy, not the original object.
+
+Copying values means that the STL containers provide value semantics. The containers contain
+the values of the objects you insert rather than the objects themselves. In practice, however, you may
+also need reference semantics. This means that the containers contain references to the objects that
+are their elements.
+The approach of the STL to support only value semantics has both strengths and weaknesses. Its
+strengths are that
+• Copying elements is simple.
+• References are error prone. You must ensure that references don’t refer to objects that no longer
+exist. You also have to manage circular references, which might occur.
+Its weaknesses are as follows:
+• Copying elements might result in bad performance or may not even be possible.
+• Managing the same object in several containers at the same time is not possible.
+In practice, you need both approaches; you need copies that are independent of the original data
+(value semantics) and copies that still refer to the original data and get modified accordingly (reference semantics). Unfortunately, there is no support for reference semantics in the C++ standard
+library. However, you can implement reference semantics in terms of value semantics.
+The obvious approach to implementing reference semantics is to use pointers as elements.14
+However, ordinary pointers have the usual problems. For example, objects to which they refer may
+no longer exist, and comparisons may not work as desired because pointers instead of the objects are
+compared. Thus, you should be very careful when you use ordinary pointers as container elements.
+A better approach is to use a kind of smart pointer: objects that have a pointer-like interface
+but that do some additional checking or processing internally.
+
+or you can use a vector of std::refernce_wrapper
+
+
+The difference between a copy constructor and an assignment operator is that a copy constructor helps to create a copy of an already existing object without altering the original value of the created object, whereas an assignment operator helps to assign a new value to a data member or an object in the program.
+
+class Test {
+public:
+	Test() {}
+	Test(const Test& t)
+	{
+		cout << "Copy constructor called " << endl;
+	}
+
+	Test& operator=(const Test& t)
+	{
+		cout << "Assignment operator called " << endl;
+		return *this;
+	}
+};
+
+// Driver code
+int main()
+{
+	Test t1, t2;
+	t2 = t1;
+	Test t3 = t1;
+	getchar();
+	return 0;
+}
+Output:
+Assignment operator called
+Copy constructor called
+
+Explanation: Here, t2 = t1;  calls the assignment operator, same as t2.operator=(t1); and  Test t3 = t1;  calls the copy constructor, same as Test t3(t1)
+
+So copy constructor is called at new object construction, even if assignment operator is used
+
+
+
+*/
+
+struct example {   // this cant be copied or assigned so trying to put it into a vector will throw an exception, using default on the copy consructor makes it usable
+	int val{ 10 };
+
+	example(const example& e) = default; // delete;
+	example() {}
+	example& operator= (const example& e) = delete; // default;   
+	//~example() = delete;    always created anyways
+};
+
+
+/*
+
+error handling in the STL:
+STL is based on best performance rather than highest security, error checking wastes time so almost none is done
+
+1. Error checking reduces performance, and speed is still a general goal of programs. As mentioned,
+good performance was one of the design goals of the STL.
+2. If you prefer safety over speed, you can still get it, either by adding wrappers or by using special
+versions of the STL. But when error checking is built into all basic operations, you can’t program
+to avoid error checking to get better performance For example, when every subscript operation
+checks whether a range is valid, you can’t write your own subscripts without checking. However,
+it is possible the other way around.
+
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
 int main()
 {
 	print({ 1, 2, 3, 4, 5 }); // pass in initialiser list
@@ -345,5 +627,13 @@ int main()
 	{
 		std::cout << "caught the integer exception" << std::endl;
 	}
+
+	std::vector<example> vec2;
+	vec2.reserve(10);
+
+	example e1;
+
+	vec2.push_back(e1);  // e1 is then copied into the vector
+
 
 }
