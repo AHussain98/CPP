@@ -294,3 +294,51 @@ dynamic_cast has some limitations, though. It doesn't work if there are multiple
 
 reinterpret_cast
 reinterpret_cast is the most dangerous cast, and should be used very sparingly. It turns one type directly into another — such as casting the value from one pointer to another, or storing a pointer in an int, or all sorts of other nasty things. Largely, the only guarantee you get with reinterpret_cast is that normally if you cast the result back to the original type, you will get the exact same value (but not if the intermediate type is smaller than the original type). There are a number of conversions that reinterpret_cast cannot do, too. It's often abused for particularly weird conversions and bit manipulations, like turning a raw data stream into actual data, or storing data in the low bits of a pointer to aligned data. For those cases, see std::bit_cast.*/
+
+
+static_cast is to perform a cast 'statically', as in at compile time. This is for classes that have a conversion between them defined. For example, this is how static casting works:
+
+int a = 5;
+float f = static_cast<float>(a); // behaves as if 'a' was a float at compile time 
+
+However, dynamic_cast is for perfoming casts 'dynamically', as in at runtime. This is most often used for polymorphism, as in changing between one instance of a class to another. For example:
+
+class Base {
+    public:
+        virtual ~Base() {}
+        // ...
+};
+
+class Derived : public Base{
+    public:
+        virtual ~Derived() {}
+
+        // func not in base
+        void someFunc() {
+            // ...
+        }
+
+        // ...
+};
+
+void func (Base* base) {
+    Derived* derived = dynamic_cast<Derived*>(base);
+
+    if (derived)
+        derived->someFunc();
+}
+
+int main() {
+    Base* d = new Derived;
+    func (d); // calls someFunc
+}
+
+
+static_cast is also used in cases of inheritance, when you know that you have an instance of Derived not of Base. 
+However, if you didn't, then you would be calling a function that doesn't exist for Base, and you would get weird results. 
+dynamic_cast, on the other hand, will fail if no conversion could be found. How it fails depends on how you are casting - the pointer versions will return nullptr and the reference versions will throw.
+
+Nevertheless, it is perfectly fine (and generally preferable) to use static_cast up the inheritance chain - it is faster because it is done at compile time rather than run time, 
+and you can't have a class with an uncertain inheritance chain, so dynamic_cast can't have failed anyway (its always a valid conversion).
+
+
