@@ -568,3 +568,244 @@ Example of High Cohesion:
 As for coupling, it refers to how related or dependent two classes/modules are toward each other. For low coupled classes, changing something major in one class should not affect the other. High coupling would make it difficult to change and maintain your code; since classes are closely knit together, making a change could require an entire system revamp.
 
 Good software design has high cohesion and low coupling.
+
+With few exceptions, place code in a namespace. Namespaces should have unique names based on the project name, and possibly its path. Do not use using-directives (e.g., using namespace foo). Do not use inline namespaces. For unnamed namespaces, see Internal Linkage.
+
+A decent rule of thumb is to not inline a function if it is more than 10 lines long.
+
+Beware of destructors, which are often longer than they appear because of implicit member- and base-destructor calls!
+
+Another useful rule of thumb: it's typically not cost effective to inline functions with loops or switch statements (unless, in the common case, the loop or switch statement is never executed).
+
+It is important to know that functions are not always inlined even if they are declared as such; for example, virtual and recursive functions are not normally inlined. Usually recursive functions should not be inline. The main reason for making a virtual function inline is to place its definition in the class, either for convenience or to document its behavior, e.g., for accessors and mutators.
+
+
+
+Inline functions are commonly used when the function definitions are small, and the functions are called several times in a program. Using inline functions saves time to transfer the control of the program from the calling function to the definition of the called function. 
+
+However, inlining a function is just a request or suggestion to the compiler, not any mandatory command. It depends on the compiler whether to accept or decline this suggestion of inlining a particular function. The compiler is most likely to not consider the inlining of a function under certain circumstances that are mentioned here as follows-
+
+When a function with a return statement is not returning any value and marked as inline, the compiler does not respond to the programmer’s request of making it an inline function.
+When a programmer tries to inline a function containing a loop (for, while, or do-while), the compiler refuses the inline suggestion.
+When a function is recursive, it cannot be inlined.
+A function containing static variables cannot be made an inline function. 
+The compiler declines the request of inlining a function if it contains any switch or go-to statements.
+
+
+Prefer placing nonmember functions in a namespace; use completely global functions rarely. Do not use a class simply to group static members. Static methods of a class should generally be closely related to instances of the class or the class's static data.
+
+
+
+It's best to declare and initialise variables as close to first use as possible.
+
+
+
+Variables needed for if, while and for statements should normally be declared within those statements, so that such variables are confined to those scopes. E.g.:
+
+while (const char* p = strchr(str, '/')) str = p + 1;
+There is one caveat: if the variable is an object, its constructor is invoked every time it enters scope and is created, and its destructor is invoked every time it goes out of scope.
+
+// Inefficient implementation:
+for (int i = 0; i < 1000000; ++i) {
+  Foo f;  // My ctor and dtor get called 1000000 times each.
+  f.DoSomething(i);
+}
+It may be more efficient to declare such a variable used in a loop outside that loop:
+
+Foo f;  // My ctor and dtor get called once each.
+for (int i = 0; i < 1000000; ++i) {
+  f.DoSomething(i);
+}
+
+Objects with static storage duration are forbidden unless they are trivially destructible. Informally this means that the destructor does not do anything, even taking member and base destructors into account. More formally it means that the type has no user-defined or virtual destructor and that all bases and non-static members are trivially destructible. Static function-local variables may use dynamic initialization. Use of dynamic initialization for static class member variables or variables at namespace scope is discouraged, but allowed in limited circumstances; see below for details.
+
+As a rule of thumb: a global variable satisfies these requirements if its declaration, considered in isolation, could be constexpr.
+
+
+
+Every object has a storage duration, which correlates with its lifetime. Objects with static storage duration live from the point of their initialization until the end of the program. Such objects appear as variables at namespace scope ("global variables"), as static data members of classes, or as function-local variables that are declared with the static specifier. Function-local static variables are initialized when control first passes through their declaration; all other objects with static storage duration are initialized as part of program start-up. All objects with static storage duration are destroyed at program exit (which happens before unjoined threads are terminated).
+
+Initialization may be dynamic, which means that something non-trivial happens during initialization. (For example, consider a constructor that allocates memory, or a variable that is initialized with the current process ID.) The other kind of initialization is static initialization. The two aren't quite opposites, though: static initialization always happens to objects with static storage duration (initializing the object either to a given constant or to a representation consisting of all bytes set to zero), whereas dynamic initialization happens after that, if required.
+
+
+
+Global and static variables are very useful for a large number of applications: named constants, auxiliary data structures internal to some translation unit, command-line flags, logging, registration mechanisms, background infrastructure, etc.
+
+
+
+Global and static variables that use dynamic initialization or have non-trivial destructors create complexity that can easily lead to hard-to-find bugs. Dynamic initialization is not ordered across translation units, and neither is destruction (except that destruction happens in reverse order of initialization). When one initialization refers to another variable with static storage duration, it is possible that this causes an object to be accessed before its lifetime has begun (or after its lifetime has ended). Moreover, when a program starts threads that are not joined at exit, those threads may attempt to access objects after their lifetime has ended if their destructor has already run.
+
+
+
+Avoid virtual method calls in constructors, and avoid initialization that can fail if you can't signal an error.
+
+
+
+Do not define implicit conversions. Use the explicit keyword for conversion operators and single-argument constructors.
+
+The explicit keyword can be applied to a constructor or a conversion operator, to ensure that it can only be used when the destination type is explicit at the point of use, e.g., with a cast. This applies not only to implicit conversions, but to list initialization syntax:
+
+class Foo {
+  explicit Foo(int x, double y);
+  ...
+};
+
+void Func(Foo f);
+Func({42, 3.14});  // Error
+
+
+A type should not be copyable/movable if the meaning of copying/moving is unclear to a casual user, or if it incurs unexpected costs. Move operations for copyable types are strictly a performance optimization and are a potential source of bugs and complexity, so avoid defining them unless they are significantly more efficient than the corresponding copy operations. If your type provides copy operations, it is recommended that you design your class so that the default implementation of those operations is correct. Remember to review the correctness of any defaulted operations as you would any other code.
+
+
+
+In C++ programming, object slicing occurs when an object of a subclass type is copied to an object of superclass type: the superclass copy will not have any of the member variables or Member functions defined in the subclass. These variables and functions have, in effect, been "sliced off".
+
+Object slicing can be prevented by making the base class function pure virtual thereby disallowing object creation. It is not possible to create the object of a class that contains a pure virtual method.
+
+To eliminate the risk of slicing, prefer to make base classes abstract, by making their constructors protected, by declaring their destructors protected, or by giving them one or more pure virtual member functions. Prefer to avoid deriving from concrete classes.
+
+
+
+Use a struct only for passive objects that carry data; everything else is a class.
+
+
+
+Composition is often more appropriate than inheritance. When using inheritance, make it public.
+
+
+
+"Interface inheritance" is inheritance from a pure abstract base class (one with no state or defined methods); all other inheritance is "implementation inheritance"
+
+All inheritance should be public. If you want to do private inheritance, you should be including an instance of the base class as a member instead. You may use final on classes when you don't intend to support using them as base classes.
+
+Do not overuse implementation inheritance. Composition is often more appropriate. Try to restrict use of inheritance to the "is-a" case: Bar subclasses Foo if it can reasonably be said that Bar "is a kind of" Foo.
+
+Limit the use of protected to those member functions that might need to be accessed from subclasses. Note that data members should be private.
+
+Explicitly annotate overrides of virtual functions or virtual destructors with exactly one of an override or (less frequently) final specifier. Do not use virtual when declaring an override. Rationale: A function or destructor marked override or final that is not an override of a base class virtual function will not compile, and this helps catch common errors. The specifiers serve as documentation; if no specifier is present, the reader has to check all ancestors of the class in question to determine if the function or destructor is virtual or not.
+
+Multiple inheritance is permitted, but multiple implementation inheritance is strongly discouraged.
+
+
+
+Specifying noexcept on a function can trigger compiler optimizations in environments where exceptions are enabled, e.g., compiler does not have to generate extra code for stack-unwinding, if it knows that no exceptions can be thrown due to a noexcept specifier.
+
+
+
+Use constexpr to define true constants or to ensure constant initialization.
+
+Some variables can be declared constexpr to indicate the variables are true constants, i.e., fixed at compilation/link time. Some functions and constructors can be declared constexpr which enables them to be used in defining a constexpr variable.
+
+Use of constexpr enables definition of constants with floating-point expressions rather than just literals; definition of constants of user-defined types; and definition of constants with function calls.
+
+Prematurely marking something as constexpr may cause migration problems if later on it has to be downgraded. Current restrictions on what is allowed in constexpr functions and constructors may invite obscure workarounds in these definitions.
+
+constexpr definitions enable a more robust specification of the constant parts of an interface. Use constexpr to specify true constants and the functions that support their definitions. Avoid complexifying function definitions to enable their use with constexpr. Do not use constexpr to force inlining.
+
+
+
+Referencing and Dereferencing of the Function Pointer in C++
+Similar to the pointer used with variables we perform referencing and dereferencing with a function pointer.
+
+Referencing: When pointer is allocated the address of the function to be associated with it then this process is referred to as referencing.
+
+Dereferencing: When we use the (*)operator  to get the value stored in the pointer.
+
+Syntax:
+
+// Declaring
+return_type (*FuncPtr) (parameter type, ....); 
+
+// Referencing
+FuncPtr= function_name;
+
+// Dereferencing
+data_type x=*FuncPtr;
+Function pointer used to call the function
+In this, we see how we point a pointer to a function and call it using that pointer. It is an efficient way to use 
+
+Example:
+
+C++
+// C++ program to implementation
+// Function Pointer
+#include <iostream>
+using namespace std;
+ 
+int multiply(int a, int b) { return a * b; }
+ 
+int main()
+{
+    int (*func)(int, int);
+ 
+    // func is pointing to the multiplyTwoValues function
+ 
+    func = multiply;
+ 
+    int prod = func(15, 2);
+    cout << "The value of the product is: " << prod << endl;
+ 
+    return 0;
+}
+
+Output
+
+The value of the product is: 30
+In the above program, we are declaring a function multiply where we are multiplying two elements a and b, then returning the result. But, rather than directly calling the function we are using a function pointer prod which is doing the same work for us.
+
+Passing a function pointer as a parameter
+When declaring a function pointer to store the memory address of the function but, when we want to pass the return value to the next function. We have two methods to perform this task. First, either pass the value we got or second pass the function pointer that already exists.
+
+Example:
+
+C++
+// C++ Program for demonstrating
+// function pointer as pointer
+#include <iostream>
+using namespace std;
+ 
+const int a = 15;
+const int b = 2;
+ 
+// Function for Multiplication
+int multiply() { return a * b; }
+ 
+// Function containing function pointer
+// as parameter
+void print(int (*funcptr)())
+{
+    cout << "The value of the product is: " << funcptr()
+         << endl;
+}
+ 
+// Driver Function
+int main()
+{
+    print(multiply);
+    return 0;
+}
+
+Output
+
+The value of the product is: 30
+
+
+Static member functions in C++ are the functions that can access only the static data members. These static data members share a single copy of themselves with the different objects of the same class. A function can be made static by using the keyword static before the function name while defining a class.
+
+
+
+Pure virtual functions must be implemented in child classes, non-pure virtual functions do not.
+
+
+
+The size_t type is the unsigned integer type that is the result of the sizeof operator (and the offsetof operator), so it is guaranteed to be big enough to contain the size of the biggest object your system can handle (e.g., a static array of 8Gb).
+
+The size_t type may be bigger than, equal to, or smaller than an unsigned int, and your compiler might make assumptions about it for optimization.
+
+size_t is used in place of unsigned int sometimes as it is the max size regardless of whether your system is 64 or 32 bit.
+
+
+
+uint64_t is guaranteed to be 64 bits. If you need 64 bits, you should use it.
+
+size_t isn't guaranteed to be 64 bits; it could be 128 bits in a future machine. So, keyword uint_64 its reserved by that
