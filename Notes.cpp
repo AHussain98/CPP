@@ -809,3 +809,37 @@ size_t is used in place of unsigned int sometimes as it is the max size regardle
 uint64_t is guaranteed to be 64 bits. If you need 64 bits, you should use it.
 
 size_t isn't guaranteed to be 64 bits; it could be 128 bits in a future machine. So, keyword uint_64 its reserved by that
+
+
+ 
+In a statically typed language, such as C++ or Java for example, static may refer to the information known at compilation time while dynamic refers to the information known at runtime.
+
+For example:
+
+struct Base { virtual std::string name() const { return "Base"; } };
+
+struct Derived: Base { std::string name() const { return "Derived"; } };
+
+void print(Base const& b) { std::cout << b.name() << "\n"; }
+In the print method, the static type of b is Base const&. Therefore, the compiler will check that all methods called exist in the context of a Base object.
+
+However, when execution comes, the call to name, as the method is virtual, is performed with regard to the dynamic type of the object:
+
+this may be Base
+this may be Derived
+this may be another derived class from Base that we know not yet
+Therefore, in the following example:
+
+int main(int argc, char* argv[]) {
+  if (argc == 1) {
+    Base base;
+    print();
+  } else {
+    Derived derived;
+    print(derived);
+  }
+};
+The static and dynamic type of base is Base and derived is Derived.
+In the print method, the static type of b is Base (always)
+Depending on the number of arguments, the dynamic of b is either Base or Derived
+It is a current mistake to assume that polymorphism is necessarily based on dynamic memory allocation, but the two concepts, while not orthogonal, can be used without one another in some conditions.
