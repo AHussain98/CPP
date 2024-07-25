@@ -843,3 +843,10 @@ The static and dynamic type of base is Base and derived is Derived.
 In the print method, the static type of b is Base (always)
 Depending on the number of arguments, the dynamic of b is either Base or Derived
 It is a current mistake to assume that polymorphism is necessarily based on dynamic memory allocation, but the two concepts, while not orthogonal, can be used without one another in some conditions.
+
+Whenever another shared_ptr is created that points to the same object, its reference count is incremented by 1. 
+When a shared_ptr goes out of scope or is reset, its reference count is decremented by 1. When the reference count reaches 0, the managed object is deleted. 
+std::shared_ptr is thread-safe in the sense that it can safely be accessed by multiple threads simultaneously. 
+The reference count that shared_ptr uses to keep track of the number of references to the managed object is atomic, which means that it can be updated safely by multiple threads at the same time without causing race conditions or undefined behavior.
+However, if multiple threads are accessing the same std::shared_ptr object without proper synchronization, there is indeed a risk of data corruption or other errors. To ensure safe concurrent access to the shared resource, proper synchronization mechanisms such as mutex locks or atomic operations must be employed. 
+Otherwise, if not properly synchronized, concurrent access to the same std::shared_ptr object could lead to race conditions and data corruption.
