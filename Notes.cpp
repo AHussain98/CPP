@@ -1962,3 +1962,5 @@ make_shared improved memory access and minimises fragmentation of the heap space
 std::make_shared performs a single allocation for both the control block and the managed object, improving performance
 reference counting increment is atomic, and delete is only called by the last remaining thread, so there's no chance of two threads trying to destroy the shared pointer. It is somewhat thread safe 
 However, the object pointed to itself is not protected, so threads would need synchronisation
+
+CPP17 & 20: String_view, string starts_with and ends_with
