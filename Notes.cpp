@@ -1900,3 +1900,9 @@ int *data = &a;     A a;
            | data[1]: 33      |
            --------------------
 data[2] -> 
+
+Because the class doesn't have any other virtual functions, adding a virtual function adds a pointer to the class. The pointer points to a vtable, unique to that class.
+
+The pointer might be the size of an int, but it might not. On a 64 bit system, it is typically twice the size of an int. But it doesn't have to be.
+
+The pointer might be at the beginning of the class's memory layout, but it might not. The beginning is a common location, but popular commercial C++ compilers will sometimes place it elsewhere.
