@@ -1918,3 +1918,5 @@ More interesting is C’s vtable. In this case, the entry for bar() points to ow
 
 Note that vtables exist at the class level, meaning there exists a single vtable per class, and is shared by all instances.
 Every time the compiler creates a vtable for a class, it adds an extra argument to it: a pointer to the corresponding virtual table, called the vpointer.
+
+In C++, the size of a struct or class is primarily determined by the size of its data members and any padding added for memory alignment. However, it’s essential to note that various factors, including the introduction of virtual functions, can influence this size. In the following example, we demonstrate how you can use this feature to visualize the impact of these factors, including the presence of a hidden vptr, on the size of a class.
