@@ -1964,3 +1964,5 @@ reference counting increment is atomic, and delete is only called by the last re
 However, the object pointed to itself is not protected, so threads would need synchronisation
 
 CPP17 & 20: String_view, string starts_with and ends_with, clean coding with auto
+Coroutines are special functions that can have their execution suspended and resumed.
+Concepts are named compile-time predicates which constrain types.
