@@ -1928,3 +1928,8 @@ Objects of Derived are laid out by simply stacking the Base subobject on the dat
 
 To solve the Diamond Inheritance Problem, C++ introduces the virtual inheritance mechanism to guarantee only one copy of virtually inherited bases under the diamond hierarchy. 
 To keep only one virtual base in the derived object, a class can be spliced into two parts, the virtual base subobject, which will be shared in the diamond inheritance case, and the other parts. The virtual base is accessed through a virtual table pointer either.
+
+Virtual functions are slightly more expensive than a regular function, so if you’re trying to make an ultra low-latency program, this section is important. Calling a virtual function involves dereferencing the vtable pointer which is an extra lookup that regular functions don’t have to do.
+
+The other thing is that compiler optimizations like inlining can’t be run on virtual function. Inlining is when function code is copied and pasted where a function is called which avoids the creation of a stack frame, pushing arguments on the stack, etc. This can’t be done with virtual functions because the function that’s being run is only determined at run time. These are very small performance hits, but worth knowing.
+You might also be wondering where are all the functions are being stored in memory. All function instructions are stored in a special place in memory once, and not per object. When things are compiled, those function calls will point to the location of the function instructions.
