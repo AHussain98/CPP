@@ -1843,3 +1843,60 @@ Can be put in a header and every file will have it's own copy of the function. N
 Speeds up link time by reducing work
 Can put a function with the same name in each translation unit, and they can all do different things. For instance, you could put a static void log(const char*) {} in each cpp file, and they could each all log in a different way.
 
+what the output of the following code is:
+
+struct A {
+    int data[2];
+    A(int x, int y) { data[0] = x; data[1] = y; }
+
+    virtual void f() {}
+};
+
+int main(){
+    A a(22, 33);
+    int* data = (int*)&a;
+    cout << data[2] << endl;
+}
+I talked through it but couldn't figure it out exactly. He mentioned that the virtual function was a hint. Afterwards I compiled it and got the output:
+
+22
+I then thought about the virtual function and removed it:
+
+struct A {
+    int data[2];
+    A(int x, int y) { data[0] = x; data[1] = y; }
+
+    //virtual void f() {}
+};
+
+int main(){
+    A a(22, 33);
+    int* data = (int*)&a;
+    cout << data[2] << endl;
+}
+Resulting in the ouput:
+
+0
+
+Adding 1 or more virtual methods to a class causes (in this case 1) an object instance of that class to contain a hidden pointer to a compiler-managed "virtual method table" (vtable) at the front of the object's memory, eg:
+
+int *data = &a;     A a;
+   data -> --------------------
+           | vtable           | -> [0]: &A::f
+           | (8 bytes)        |
+           |------------------|
+data[2] -> | data[0]: 22      |
+           |------------------|
+           | data[1]: 33      |
+           --------------------
+Assuming sizeof(int) is 4 (which is usually the case), being able to access the object's data[0] member via an int* pointer to the object, where that pointer is indexing the 3rd int, tells us that there is an extra 8 bytes present at the front of the object, which can be accounted for by the vtable pointer, if the code is being compiling as 64bit (if it were compiled as 32bit instead, the vtable pointer would be 4 bytes, and data[2] would be accessing A::data[1] = 33).
+
+Without any virtual methods, there is no vtable present, so the extra 8 bytes are not present, and thus indexing to the 3rd int from the front of the object will exceed past the bounds of the object into surrounding memory, eg:
+
+int *data = &a;     A a;
+   data -> --------------------
+           | data[0]: 22      |
+           |------------------|
+           | data[1]: 33      |
+           --------------------
+data[2] -> 
