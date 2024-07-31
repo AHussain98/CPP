@@ -1923,3 +1923,5 @@ In C++, the size of a struct or class is primarily determined by the size of its
 
 Non-static data members of a (non-union) class with the same access control are allocated so that later members have higher addresses within a class object. The order of allocation of non-static data members with different access control is unspecified. Implementation alignment requirements might cause two adjacent members not to be allocated immediately after each other; so might requirements for space for managing virtual functions and virtual base classes.
 If a pointer to the base class is assigned a derived object, it can only see the subobject part. It can be deemed as an object slicing.
+
+Objects of Derived are laid out by simply stacking the Base subobject on the data member of its own.
