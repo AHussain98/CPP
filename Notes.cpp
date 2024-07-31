@@ -1906,3 +1906,7 @@ Because the class doesn't have any other virtual functions, adding a virtual fun
 The pointer might be the size of an int, but it might not. On a 64 bit system, it is typically twice the size of an int. But it doesn't have to be.
 
 The pointer might be at the beginning of the class's memory layout, but it might not. The beginning is a common location, but popular commercial C++ compilers will sometimes place it elsewhere.
+
+size of the struct or class is the sum of its member data, in the order that they're stated, plus extra bits of padding added for alignment (memory fetched in 8 bytes)
+Functions do not occupy space in the object for the same reason static member variables do not occupy object space. There only needs to exist one instance of the function, used by all object instances.
+ If a structure has virtual functions then it implicitly includes a pointer to the table of virtual function pointers as a data member for each object of the structure type.
