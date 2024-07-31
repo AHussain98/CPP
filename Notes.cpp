@@ -850,3 +850,23 @@ std::shared_ptr is thread-safe in the sense that it can safely be accessed by mu
 The reference count that shared_ptr uses to keep track of the number of references to the managed object is atomic, which means that it can be updated safely by multiple threads at the same time without causing race conditions or undefined behavior.
 However, if multiple threads are accessing the same std::shared_ptr object without proper synchronization, there is indeed a risk of data corruption or other errors. To ensure safe concurrent access to the shared resource, proper synchronization mechanisms such as mutex locks or atomic operations must be employed. 
 Otherwise, if not properly synchronized, concurrent access to the same std::shared_ptr object could lead to race conditions and data corruption.
+
+The auto keyword in C++ automatically detects and assigns a data type to the variable with which it is used. The compiler analyses the variable's data type by looking at its initialization. It is necessary to initialize the variable when declaring it using the auto keyword.
+
+The only problem with using the auto keyword is that constant variables will not be analyzed. If we want a variable to be constant and define it using the auto keyword, we will also have to use the keyword const along with the auto keyword. 
+
+The auto keyword is also used as the return type for any function. The only condition is that each return statement inside this function should return the same variable type. The compiler decides the function's return type by analyzing the return statement expression. 
+
+Like the auto keyword in C++, the auto&& keyword can be used as a universal reference value, which means it will accept any value, whether an lvalue or an rvalue reference expression. Let us look in detail at what this exactly means.
+
+To recap, an lvalue expression is one whose resources cant be reused, like normal variables in C++ or any other objects that are declared using a name directly. 
+For example, in the code int y = 7; 
+y is an lvalue. Similarly, 
+arr[0] is also an lvalue where
+arr is a vector. These objects are such that they are declared with a name and are permanent.
+
+But an rvalue expression denotes an object whose resources cannot be reused, which means a temporary disposable object. These objects are not declared or defined explicitly. For example, in the code func(class_obj()) where func() is a function that takes a class object as a parameter. It is clear in the code that we have not explicitly defined any class object. Instead, we have just passed the function class_obj() as a parameter which will create a temporary class object and pass it to the function func(). Hence, this class object is temporary, disposable, and an rvalue.
+
+Now, to reference an lvalue object or variable, we have to use one & symbol, but to reference an rvalue object or variable, we have to use two ampersands &&. But, if we use the auto keyword to declare the reference, we can use auto&&, which will work for both lvalue and rvalue reference expressions.
+
+
