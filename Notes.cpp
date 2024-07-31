@@ -1925,3 +1925,6 @@ Non-static data members of a (non-union) class with the same access control are 
 If a pointer to the base class is assigned a derived object, it can only see the subobject part. It can be deemed as an object slicing.
 
 Objects of Derived are laid out by simply stacking the Base subobject on the data member of its own.
+
+To solve the Diamond Inheritance Problem, C++ introduces the virtual inheritance mechanism to guarantee only one copy of virtually inherited bases under the diamond hierarchy. 
+To keep only one virtual base in the derived object, a class can be spliced into two parts, the virtual base subobject, which will be shared in the diamond inheritance case, and the other parts. The virtual base is accessed through a virtual table pointer either.
