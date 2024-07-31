@@ -1920,3 +1920,6 @@ Note that vtables exist at the class level, meaning there exists a single vtable
 Every time the compiler creates a vtable for a class, it adds an extra argument to it: a pointer to the corresponding virtual table, called the vpointer.
 
 In C++, the size of a struct or class is primarily determined by the size of its data members and any padding added for memory alignment. However, it’s essential to note that various factors, including the introduction of virtual functions, can influence this size. In the following example, we demonstrate how you can use this feature to visualize the impact of these factors, including the presence of a hidden vptr, on the size of a class.
+
+Non-static data members of a (non-union) class with the same access control are allocated so that later members have higher addresses within a class object. The order of allocation of non-static data members with different access control is unspecified. Implementation alignment requirements might cause two adjacent members not to be allocated immediately after each other; so might requirements for space for managing virtual functions and virtual base classes.
+If a pointer to the base class is assigned a derived object, it can only see the subobject part. It can be deemed as an object slicing.
