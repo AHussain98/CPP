@@ -1940,3 +1940,20 @@ The data packets transferred in TCP are in sequence that I explained in the firs
 TCP is much more reliable than UDP since TCP provides error checking support and guarantees data delivery to the destination. In contrast, UDP provides only fundamental error checking support.
 
 Size of empty struct is 1 byte. the reason the size is non-zero is "To ensure that the addresses of two different objects will be different." And the size can be 1 because alignment doesn't matter here, as there is nothing to actually look at.
+
+shared pointer details:
+The count of references and all additional information is kept in ‘control block’ — which is additional heap allocated memory space keeping state of the shared object, specifically:
+
+pointer to the heap memory block of the object
+shared reference count — indicating how many shared_ptr instances are referring to the object
+weak reference count — indicating how many weak_ptr instances are referring to the object
+deleter object — the deleter object being responsible for releasing the heap memory resource of the object. This can be useful if there is a need to implement specific memory pool and manage heap allocation/deallocation
+allocator object — the object being responsible to allocate the memory for both managed object and control block.
+So in summary, shared pointer, as an object keeps two references:
+
+pointer to the heap allocated object
+pointer to the control block
+
+Shared pointers keeps an ‘extra’ reference to the heap location of the object, while could just keep a reference to the control block only and use control block’s reference to access the heap object. However, it would leave performance impact, as each object access would require 2 level of de-referencing: shared-ptr → control block → object.
+As shared pointer keeps two properties as a member object, the update of shared pointer’s state in MT mode can lead to data races and MT issues(e.g. while the first member is updated, another thread updates/reads the data). However, the control block itself is thread safe, i.e. there can’t be a case that the object is destroyed twice and increment/decrement of counters is atomic operation.
+Control block keeps a counter of weak pointers too, as this information should be used to determine when the control block can be destroyed. Weak pointer uses control block to determine if the object is still available to construct shared pointer through weak_ptr::lock() function.
