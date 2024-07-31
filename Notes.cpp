@@ -1910,3 +1910,11 @@ The pointer might be at the beginning of the class's memory layout, but it might
 size of the struct or class is the sum of its member data, in the order that they're stated, plus extra bits of padding added for alignment (memory fetched in 8 bytes)
 Functions do not occupy space in the object for the same reason static member variables do not occupy object space. There only needs to exist one instance of the function, used by all object instances.
  If a structure has virtual functions then it implicitly includes a pointer to the table of virtual function pointers as a data member for each object of the structure type.
+
+For every class that contains virtual functions, the compiler constructs a virtual table, a.k.a vtable. The vtable contains an entry for each virtual function accessible by the class and stores a pointer to its definition. Only the most specific function definition callable by the class is stored in the vtable. Entries in the vtable can point to either functions declared in the class itself (e.g. C::bar()), or virtual functions inherited from a base class (e.g. C::qux()).
+The vtable of class B has two entries, one for each of the two virtual functions declared in B’s scope: bar() and qux(). Additionally, the vtable of B points to the local definition of functions, since they are the most specific (and only) from B’s point of view.
+
+More interesting is C’s vtable. In this case, the entry for bar() points to own C’s implementation, given that it is more specific than B::bar(). Since C doesn’t override qux(), its entry in the vtable points to B’s definition (the most specific definition).
+
+Note that vtables exist at the class level, meaning there exists a single vtable per class, and is shared by all instances.
+Every time the compiler creates a vtable for a class, it adds an extra argument to it: a pointer to the corresponding virtual table, called the vpointer.
