@@ -194,7 +194,8 @@ There is difference in linking and compilation when it comes to understanding er
 Compiler shows errors in syntax, for example semi-colon not mentioned, data type not defined etc but if there is an error that function has been defined multiple times, then this error is from linker as its indicating that two or more source code files have the same meaning and that is leading to an error.
 
 
-
+When you declare a variable in a function, the static keyword specifies that the variable retains its state between calls to that function. 
+When you declare a data member in a class declaration, the static keyword specifies that one copy of the member is shared by all instances of the class.
 
 */
 
