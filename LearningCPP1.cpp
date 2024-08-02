@@ -229,9 +229,6 @@ address contained in the pointer pnumber, you use the expression *pnumber. */
 "Oliver Hardy", "Greta Garbo"
  };
 
-The extra const keyword following the element type specification defines the elements as constant, so now 
-the pointers and the strings they point to are defined as constant. Nothing about this array can be changed.*/
-
 /*  A pointer to a constant: You can’t modify what’s pointed to, but you can set the 
 pointer to point to something else:
 const char* pstring {"Some text that cannot be changed"};
