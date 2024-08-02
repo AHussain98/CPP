@@ -1966,3 +1966,24 @@ However, the object pointed to itself is not protected, so threads would need sy
 CPP17 & 20: String_view, string starts_with and ends_with, clean coding with auto
 Coroutines are special functions that can have their execution suspended and resumed.
 Concepts are named compile-time predicates which constrain types.
+
+
+Static member functions in C++ are the functions that can access only the static data members. These static data members share a single copy of themselves with the different objects of the same class. A function can be made static by using the keyword static before the function name while defining a class.
+
+
+
+Pure virtual functions must be implemented in child classes, non-pure virtual functions do not.
+
+
+
+The size_t type is the unsigned integer type that is the result of the sizeof operator (and the offsetof operator), so it is guaranteed to be big enough to contain the size of the biggest object your system can handle (e.g., a static array of 8Gb).
+
+The size_t type may be bigger than, equal to, or smaller than an unsigned int, and your compiler might make assumptions about it for optimization.
+
+size_t is used in place of unsigned int sometimes as it is the max size regardless of whether your system is 64 or 32 bit.
+
+
+
+uint64_t is guaranteed to be 64 bits. If you need 64 bits, you should use it.
+
+size_t isn't guaranteed to be 64 bits; it could be 128 bits in a future machine. So, keyword uint_64 its reserved by that
